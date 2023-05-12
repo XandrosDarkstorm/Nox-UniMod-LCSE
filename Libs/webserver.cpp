@@ -33,7 +33,6 @@ using namespace std ;
 #define SERVER "Nox UniMod/0.4.1"
 #define PROTOCOL "HTTP/1.0"
 #define RFC1123FMT "%a, %d %b %Y %H:%M:%S GMT"
-#define PORT 80
 //extern lua_State *L;
 extern void getServerVar(const char *VarName);
 void httpGetCallback();

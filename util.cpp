@@ -258,6 +258,7 @@ void conPrintI(const char *S)
 	if (lastConColor!=2)
 		lastConColor=2;
 };
+
 int (__cdecl *printCentered)(wchar_t *Text);
 void printI(const char *S)
 {
@@ -343,7 +344,7 @@ int printL(lua_State *L)
 		lua_pushnil(L);
 	else
 		lua_getinfo(L, "f", &ar);
-    if (!lua_isnil(L, -1)) 
+	if (!lua_isnil(L, -1)) 
 		lua_getfenv(L,-1);
 	if (lua_type(L,-1)==LUA_TTABLE)
 	{
@@ -423,6 +424,8 @@ DWORD *frameCounter=(DWORD*)0x0084EA04;
 DWORD *idGold=(DWORD*)0x00750714;
 
 #include <vector>
+#include "authManager.cpp"
+#include "noxManifest.cpp"
 int *scriptStackSize=(int *)0x0075AE40;
 std::vector<void *> scriptValues;
 
@@ -542,7 +545,7 @@ namespace
 		if(P==NULL)
 			return 0;
 		P+=lua_tointeger(L,2);
-		lua_pushnumber(L, *((_Uint32t*)P));
+		lua_pushnumber(L, *((uint32_t*)P));
 		return 1;
 	}
 	int getPtrIntL(lua_State *L)
@@ -681,7 +684,7 @@ namespace
 			lua_error_(L);
 		}
 		VirtualProtect(P,4,PAGE_EXECUTE_READWRITE,&OldProtect);
-		*((_Uint32t*)P) = lua_tointeger(L, 3);
+		*((uint32_t*)P) = lua_tointeger(L, 3);
 		VirtualProtect(P,4,OldProtect,&OldProtect);
 		return 0;
 	}
@@ -899,8 +902,8 @@ namespace
 		// 2 - записать в log и рестартовать нокс
 		// 
 	LONG WINAPI ExceptionFilter(
-	    _EXCEPTION_POINTERS *EI
-	    )
+		_EXCEPTION_POINTERS *EI
+		)
 	{
 		static char Buf[1024];
 		char *P=Buf;
@@ -1016,6 +1019,7 @@ namespace
 	void __cdecl onEachFrame()
 	{
 		replayEachFrame();
+#ifdef RCON_HTTP_SERVER
 		if(specialAuthorisation)
 			for(int i=0; i<0x20; i++)
 			{
@@ -1041,6 +1045,7 @@ namespace
 					authSendWelcomeMsg[i]=0;
 				}
 			}
+#endif
 		serverUpdate();
 		DWORD Time = *frameCounter;
 		int Top = lua_gettop(L);
@@ -1168,7 +1173,6 @@ void lua_error_(lua_State*L)
 	lua_error(L);
 }
 
-extern void initSDL();
 extern void windowsAllInit();
 extern void unitFunctionInit();
 extern void mapInit();
@@ -1202,9 +1206,9 @@ extern void initModLib2();
 extern void initFilesystem();
 
 extern "C" void adminInit(lua_State *L);
-//extern "C" void authInit(lua_State *L);
 extern "C" int luaopen_lpeg (lua_State *L);
 extern "C" void mapUtilInit(lua_State*L);
+extern "C" void initManifest(lua_State * L);
 extern bool serverUpdate();
 
 int initWindowedMode(int param1, int param2, int param3)
@@ -1220,10 +1224,12 @@ int initWindowedMode(int param1, int param2, int param3)
 	return initWindowedModeNox(param1, param2, param3);
 }
 
+/// <summary>
+/// Initializes various modules, hacks and other stuff.
+/// The last function of the Unimod init.
+/// </summary>
 void initStepTwo()
 {
-	initSDL();
-	//MessageBox(0,"!1",0,0);
 	exInit();
 	initModLib2();
 	luaopen_lpeg (L);
@@ -1231,7 +1237,7 @@ void initStepTwo()
 	ASSIGN(printCentered,0x00445490);
 	ASSIGN(sub51ADF0,0x0051ADF0);
 	ASSIGN(noxGetUnitsInRect,0x00517C10);
-	ASSIGN(oldCreateAtPart,0x004DAA55);// Возврат
+	ASSIGN(oldCreateAtPart,0x004DAA55);
 	ASSIGN(noxAlloc,0x00403560);
 	ASSIGN(noxCAlloc,0x004041D0);
 	ASSIGN(noxFree,0x0040425D);
@@ -1343,17 +1349,16 @@ void initStepTwo()
 	lua_pushcfunction(L,&memFreeL);
 	lua_setglobal(L,"memFree");
 
+	//Modules
 	mapUtilInit(L);
 	initFilesystem();
 	consoleInit();
 	adminInit(L);
-	//authInit(L);
-	initAuthData();
+	authInit(L);   //Authentication service module
 	initAudServer(L);
 	reactInit();
 
 	windowsAllInit();
-	clientViewInit();
 	unitFunctionInit();
 	mapInit();
 	tilesInit();
@@ -1403,9 +1408,6 @@ void initStepTwo()
 #include "lua/binGlobal/filesystem.inc.lua.inc"
 
 	lua_settop(L,Top);
-
-	//lua_pushnil(L);
-	//lua_setglobal(L,"os");/// выкинуть вон небезопасную таблицу
 
 	int topLoad = lua_gettop(L);
 
@@ -1462,4 +1464,5 @@ void initStepTwo()
 	registerclient("getGameDirectory", &getGameDirectoryL);
 	registerclient("getNormalizedPath", &getNormalizedPathL);
 	registerclient("getDirectoryListing", &getDirectoryListingL);
+	initManifest();
 };

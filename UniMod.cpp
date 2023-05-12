@@ -16,7 +16,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 		initModLib1(hModule);
 		L=luaL_newstate();
 	}
-	else if ( ul_reason_for_call== DLL_PROCESS_ATTACH)
+	else if ( ul_reason_for_call== DLL_PROCESS_DETACH)
 	{
 		lua_close(L);
 	}

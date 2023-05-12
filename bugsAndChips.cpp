@@ -137,7 +137,7 @@ namespace
 		getServerVar("creatureSummonWhatDo");
 		if (lua_type(L,-1)==LUA_TNIL)
 		{
- 			wndSummonCreateList(B);
+			wndSummonCreateList(B);
 			lua_settop(L,Top);
 			return;
 		}
@@ -340,7 +340,7 @@ namespace
 			mov ecx,[esp]
 			add esp,4 
 			
-l1: // exit, как то блин так и назвал, удивлялся почему нокс закрывается
+l1: // exit
 			push 0052C7D9h
 			ret
 		}
@@ -369,11 +369,15 @@ int __cdecl netOnPacketRecvServ_Hook(int playerId, char *packet, int length)
 	}
 
 	packet++;
-	// Check if nickname starts with invalid character
-	if (packet[0] <= 0x1F)
+	/*
+	Check if nickname starts with unprintable character
+	This can only happen if client's character data is malformed or packet was sent directly.
+	Do not accept the player.
+	*/
+	if (packet[0] < ' ')
 	{
-		wcscpy((wchar_t*)packet, L"Jack\0");
-		conPrintI("[UniMod] Bugged player name was detected!");
+		conPrintI("Rejected join request.");
+		return 0;
 	}
 
 	// Check if player class is invalid
@@ -409,25 +413,30 @@ void bugsInit()
 	ASSIGN(cliSummondWndLoad,0x004C2E50);
 
 	InjectJumpTo(0x004E1C8A,&asmDeathBallBugGs);
+	announceCapability("fix_force_of_nature_greatsword_block");
 	InjectJumpTo(0x004E1BD6,&asmDeathBallBugSh);
+	announceCapability("fix_force_of_nature_shield_block");
 
-	bool conjurerSummonCmdImprovements=false;
-	if (conjurerSummonCmdImprovements)
-	{
-		InjectJumpTo(0x004C2BC7,&asmConjSummonEnotherCmp); // делаем возможность ПКМ
-		InjectJumpTo(0x004C2BB6,&asmConjSummonDo); // ставим вместо списка наши 2 прикольные штуки
-		InjectJumpTo(0x0049179A,&asmConjSummonCreate);
-		InjectJumpTo(0x004C2ACC,&asmConjSummonDoAll);
-		InjectJumpTo(0x004C3147,&asmConjSummonDieOrBanish);
-		InjectJumpTo(0x004C1FA1,&asmConjSummonLoadWnd);
-	}
+#ifdef CONJURER_SUMMON_QUICK_CONTROL
+	InjectJumpTo(0x004C2BC7,&asmConjSummonEnotherCmp); // support right-clicking on creatures in UI
+	InjectJumpTo(0x004C2BB6,&asmConjSummonDo); // Replace list with quick action processor code
+	InjectJumpTo(0x0049179A,&asmConjSummonCreate);
+	InjectJumpTo(0x004C2ACC,&asmConjSummonDoAll);
+	InjectJumpTo(0x004C3147,&asmConjSummonDieOrBanish);
+	InjectJumpTo(0x004C1FA1,&asmConjSummonLoadWnd);
+	announceCapability("conjurer_summon_quick_commands");
+#endif
 
-	//InjectJumpTo(0x0052C7CD,&asmFixCastFireball);
+	InjectJumpTo(0x0052C7CD,&asmFixCastFireball);
 
-	bool filterPlayerJoinData=true; // TODO: convert all similar hardcoded-switches into #defines in a separate file
+	// TODO: convert all similar hardcoded-switches into #defines in a separate file
+	// Validates incoming player data in order to prevent rogue players crashing the server
+	bool filterPlayerJoinData=true; 
 	if (filterPlayerJoinData)
 	{
 		InjectOffs(0x4DEC40 + 1, &netOnPacketRecvServ_Hook);
+		announceCapability("fix_malformed_character_join");
 	}
 	ASSIGN(netOnPacketRecvServ, 0x51BAD0);
+
 }

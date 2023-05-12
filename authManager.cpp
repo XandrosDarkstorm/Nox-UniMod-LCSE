@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#ifdef RCON_HTTP_SERVER
+
 #include "unit.h"
 #include "player.h"
 #include <map>
@@ -10,9 +12,7 @@
 #include "Libs/csha1/SHA1.h"
 
 
-#ifdef WIN32
 #define _CRT_SECURE_NO_WARNINGS
-
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <winsock.h>
@@ -23,12 +23,6 @@
 #define S_ISREG(x) (0!=((x) & S_IFREG ))
 #define S_ISDIR(x) (0!=((x) & S_IFDIR ))
 
-#else
-#include <os.h>
-#include <dirent.h>
-#define closesocket close
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -36,15 +30,6 @@
 #include <sys/stat.h>
 //#include <process.h>
 //#include <queue>
-//#include "stdafx.h"
-using namespace std ;
-#define SERVER "Nox UniMod/0.4.1"
-#define PROTOCOL "HTTP/1.0"
-#define RFC1123FMT "%a, %d %b %Y %H:%M:%S GMT"
-#define PORT 80
-
-
-using namespace std;
 
 extern byte authorisedState[0x20];
 extern char* authorisedLogins[0x20];
@@ -54,9 +39,9 @@ extern std::pair<int, char*> httpGetInternal(char* uri);
 
 namespace
 {
-	queue<bool> updateAuthDB;
+	std::queue<bool> updateAuthDB;
 	
-	map<byte, char*> notLoggedIn;
+	std::map<byte, char*> notLoggedIn;
 
 	bool authUpdating=false;
 	HANDLE authUpdate;
@@ -66,12 +51,12 @@ namespace
 	bool specialAuthRemote=false;
 	bool remoteAuthUpdating=false;
 	HANDLE remoteAuthUpdate;
-	queue<char*> remoteCommandList;
+	std::queue<char*> remoteCommandList;
 
 	int lastAuthResultCodeL;
 	HANDLE remoteAuthLogin;
 	bool remoteAuthLoggingIn=false;
-	queue <byte>notLoggedInRemote;
+	std::queue <byte>notLoggedInRemote;
 
 	struct sha1hash
 	{
@@ -114,17 +99,17 @@ namespace
 		char unused[8];
 	};
 
-	typedef map<sha1hash, account> authMap;
+	typedef std::map<sha1hash, account> authMap;
 	authMap authData;
 
 
-	string urlencode(const string &c);
-	string char2hex( char dec );
+	std::string urlencode(const std::string &c);
+	std::string char2hex( char dec );
 
-	string urlencode(const string &c)
+	std::string urlencode(const std::string &c)
 	{
 	    
-		string escaped="";
+		std::string escaped="";
 		int max = c.length();
 		for(int i=0; i<max; i++)
 		{
@@ -145,7 +130,7 @@ namespace
 		return escaped;
 	}
 
-	string char2hex( char dec )
+	std::string char2hex( char dec )
 	{
 		char dig1 = (dec&0xF0)>>4;
 		char dig2 = (dec&0x0F);
@@ -154,7 +139,7 @@ namespace
 		if ( 0<= dig2 && dig2<= 9) dig2+=48;
 		if (10<= dig2 && dig2<=15) dig2+=97-10;
 
-		string r;
+		std::string r;
 		r.append( &dig1, 1);
 		r.append( &dig2, 1);
 		return r;
@@ -163,8 +148,8 @@ namespace
 
 	unsigned __stdcall authRemoteCommand(void* command)
 	{
-		string urlEncode((char*)command);
-		string urlEncoded=urlencode(urlEncode);
+		std::string urlEncode((char*)command);
+		std::string urlEncoded=urlencode(urlEncode);
 		char* resultCommand=new char[strlen(urlEncoded.c_str())+strlen(remoteCommand)+1];
 		strcpy(resultCommand, remoteCommand);
 		strcat(resultCommand, urlEncoded.c_str());
@@ -176,8 +161,8 @@ namespace
 
 	unsigned __stdcall authRemoteLogin(void* command)
 	{
-		string urlEncode((char*)command);
-		string urlEncoded=urlencode(urlEncode);
+		std::string urlEncode((char*)command);
+		std::string urlEncoded=urlencode(urlEncode);
 		char* resultCommand=new char[strlen(urlEncoded.c_str())+strlen(remoteCommand)+1];
 		strcpy(resultCommand, remoteCommand);
 		strcat(resultCommand, urlEncoded.c_str());
@@ -189,7 +174,7 @@ namespace
 
 	unsigned __stdcall saveAuthData(void* Data)
 	{
-		ofstream file("authData.bin", ios::out | ios::trunc | ios::binary);
+		std::ofstream file("authData.bin", std::ios::out | std::ios::trunc | std::ios::binary);
 		for (authMap::const_iterator it = authData.begin(); it != authData.end(); ++it)
 		{
 			char rawData[100];
@@ -223,7 +208,7 @@ namespace
 		newAcc->isActive=true;
 		newAcc->isAdmin=false;
 		memset(newAcc->unused, '\0', 8);
-		pair<sha1hash, account> newPair = pair<sha1hash, account>(sha1hash(lhash), *newAcc);
+		std::pair<sha1hash, account> newPair = std::pair<sha1hash, account>(sha1hash(lhash), *newAcc);
 		if(authData.insert(newPair).second)
 		{
 			updateAuthDB.push(true);
@@ -353,7 +338,7 @@ namespace
 		}
 		if(notLoggedIn.empty()!=true && specialAuthRemote==false)
 		{
-			for (map<byte, char*>::const_iterator it = notLoggedIn.begin(); it != notLoggedIn.end(); ++it)
+			for (std::map<byte, char*>::const_iterator it = notLoggedIn.begin(); it != notLoggedIn.end(); ++it)
 			{
 				if(authLogin(authorisedLogins[it->first], it->second))
 					authorisedState[it->first]++;
@@ -697,40 +682,45 @@ namespace
 	}
 }
 
-void authInit(lua_State *L)
-{
-	registerserver("authRegister",&authRegisterL);
-	registerserver("authLock",&authLockL);
-	registerserver("authLogin",&authLoginL);
-	registerserver("authChangePass",&authChangePassL);
-	registerserver("authToggle",&authToggleL);
-	registerserver("authDelete",&authDeleteL);
-	registerserver("playerGetByLogin",&playerGetByLogin);
-}
 bool initAuthData()
 {
-	ifstream file("authData.bin", ios::in | ios::binary);
+	std::ifstream file("authData.bin", std::ios::in | std::ios::binary);
 	if(file.is_open())
 	{
-		file.seekg(0, ios::end);
+		file.seekg(0, std::ios::end);
 		size_t filesize=file.tellg();
 		for(size_t i=0; (i+100)<=filesize; i+=100)
 		{
-			file.seekg(i, ios::beg);
+			file.seekg(i, std::ios::beg);
 			unsigned char *loginhash = new unsigned char[20];
 			file.read((char*)loginhash, 20);
-			file.seekg(i+20, ios::beg);
+			file.seekg(i+20, std::ios::beg);
 			char logindata[80];
 			file.read(logindata, 80);
 			account *authEntry = new account;
 			memcpy(authEntry, logindata, 80);
-			authData.insert(pair<sha1hash, account>(sha1hash(loginhash), *authEntry));
+			authData.insert(std::pair<sha1hash, account>(sha1hash(loginhash), *authEntry));
 		}
 		file.close();
 		return true;
 	}
 	file.close();
 	return false;
+}
+
+void authInit(lua_State* L)
+{
+	if (initAuthData())
+	{
+		registerserver("authRegister", &authRegisterL);
+		registerserver("authLock", &authLockL);
+		registerserver("authLogin", &authLoginL);
+		registerserver("authChangePass", &authChangePassL);
+		registerserver("authToggle", &authToggleL);
+		registerserver("authDelete", &authDeleteL);
+		registerserver("playerGetByLogin", &playerGetByLogin);
+		announceCapability("client_authentication");
+	}
 }
 
 void updateAuthDBProcess()
@@ -785,7 +775,8 @@ void authCheckDelayed(byte playerIdx, char* pass)
 
 	
 	
-	notLoggedIn.insert(pair<byte, char*>(playerIdx, pass));
+	notLoggedIn.insert(std::pair<byte, char*>(playerIdx, pass));
 	if(specialAuthRemote)
 		notLoggedInRemote.push(playerIdx);
 }
+#endif

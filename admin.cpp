@@ -997,9 +997,7 @@ namespace
 	int playerKickUData(lua_State *L)
 	{
 		lua_settop(L,1);
-		if (
-			(lua_type(L,1)!=LUA_TLIGHTUSERDATA)
-			)
+		if ((lua_type(L,1)!=LUA_TLIGHTUSERDATA))
 		{
 			lua_pushstring(L,"wrong args!");
 			lua_error_(L);
@@ -1169,8 +1167,10 @@ void adminInit(lua_State *L)
 	InjectOffs(0x004D280B+1,&onMapCycleEnabledCheck); //Обход проверки на вкл. мапцикл если использовалась formNextGame
 	InjectOffs(0x0043E333+1,&OnGuiUpdate);
 	InjectOffs(0x00413D37+1,&onEndGame);
-	InjectOffs(0x004D281D+1,&onLoadMapCycle); //Хук на мапцикл
-	InjectOffs(0x004D283F+1,&onLoadMapCycle); //Хук на мапцикл
+	//Mapcycle hooks
+	InjectOffs(0x004D281D+1,&onLoadMapCycle);
+	InjectOffs(0x004D283F+1,&onLoadMapCycle);
+
 	InjectOffs(0x004D284F+1,&onMapLoadName); //Поддержка new=1 в formNextGame (а вообще походу костыль)
 	InjectOffs(0x0043AAB9+1,&onServerStart); //Server startup hook - инициализируем тут свои переменные
 	InjectOffs(0x004DE55E+1,&onPlayerLeave); //Уход игрока с серва - деавторизуем его
@@ -1226,7 +1226,10 @@ void adminInit(lua_State *L)
 	lua_getfield(L,LUA_REGISTRYINDEX,"server");
 	lua_setfenv(L,-2);
 	lua_setfield(L,LUA_REGISTRYINDEX,"serverFnSysop");
+#ifdef RCON_HTTP_SERVER;
 	registerserver("httpServer",&httpServerL);
+	announceCapability("sysop_http_server");
+#endif
 	registerserver("formGame",&formGame);
 	registerserver("formNextGame",&formNextGame);
 	registerserver("banList",&banGetList);
@@ -1242,4 +1245,5 @@ void adminInit(lua_State *L)
 	authInit(L);
 	//strcpy((char*)0x005AFA20, "So_Forum"); // Смена дефолтной чат-мапы при игре через "локальную" сеть
 	lua_settop(L,Top);
+	announceCapability("game_management");
 }

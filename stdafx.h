@@ -14,6 +14,7 @@
 #include <tchar.h>
 #include <stdlib.h>
 #include <string>
+#include "buildParameters.h"
 
 typedef unsigned char byte;
 typedef unsigned short WORD;
@@ -28,6 +29,8 @@ extern "C"
 extern lua_State *L;
 typedef std::string TString;
 typedef unsigned char byte;
+
+extern void announceCapability(const char* capability_name);
 
 enum uniPacket_e
 {

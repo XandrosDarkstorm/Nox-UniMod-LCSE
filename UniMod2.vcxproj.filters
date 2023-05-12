@@ -121,9 +121,6 @@
     <ClCompile Include="spells.cpp">
       <Filter>Source Files\server</Filter>
     </ClCompile>
-    <ClCompile Include="clientView.cpp">
-      <Filter>Source Files\client</Filter>
-    </ClCompile>
     <ClCompile Include="cliUtil.cpp">
       <Filter>Source Files\client</Filter>
     </ClCompile>
@@ -193,8 +190,8 @@
     <ClCompile Include="lua_addons.cpp">
       <Filter>Source Files\Util</Filter>
     </ClCompile>
-    <ClCompile Include="SDL.cpp">
-      <Filter>Source Files\Util</Filter>
+    <ClCompile Include="noxManifest.cpp">
+      <Filter>Source Files\client</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -222,24 +219,13 @@
     <ClInclude Include="player.h">
       <Filter>Source Files\server\player</Filter>
     </ClInclude>
+    <ClInclude Include="buildParameters.h" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="Libs\freetype.lib">
-      <Filter>lib</Filter>
-    </Library>
     <Library Include="Libs\libpng.lib">
       <Filter>lib</Filter>
     </Library>
-    <Library Include="Libs\SDL2.lib">
-      <Filter>lib</Filter>
-    </Library>
-    <Library Include="Libs\SDL2_ttf.lib">
-      <Filter>lib</Filter>
-    </Library>
     <Library Include="Libs\socket.lib">
-      <Filter>lib</Filter>
-    </Library>
-    <Library Include="Libs\VQA.lib">
       <Filter>lib</Filter>
     </Library>
     <Library Include="Libs\zlib.lib">

@@ -291,7 +291,7 @@ namespace
 	{
 		if ((lua_type(L,1)!=LUA_TSTRING) )
 		{
-			lua_pushstring(L,"wrong args!");
+			lua_pushstring(L,"[conExec,type_arg1] -> argument must be a string.");
 			lua_error_(L);
 		}
 		wchar_t Buf[200];

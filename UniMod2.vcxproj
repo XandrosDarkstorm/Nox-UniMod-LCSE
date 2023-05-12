@@ -27,7 +27,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v110_xp</PlatformToolset>
+    <PlatformToolset>v141_xp</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -49,7 +49,7 @@
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)Libs\LuaJIT-2.0.3\src;$(SolutionDir)Libs\SDL\SDL2_ttf-2.0.12;$(SolutionDir)Libs\SDL\SDL2-2.0.8\include;$(UniversalCRT_IncludePath);$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Libs\LuaJIT-2.0.3\src;$(UniversalCRT_IncludePath);$(IncludePath)</IncludePath>
     <EmbedManifest>false</EmbedManifest>
     <LibraryPath>$(UniversalCRT_LibraryPath_x86);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
@@ -63,7 +63,7 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>Libs\lpng151;Libs\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;UNIMOD_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
+      <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -72,7 +72,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>Shlwapi.lib;User32.lib;Psapi.lib;libcmtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>..\$(ProjectName).dll</OutputFile>
+      <OutputFile>$(SolutionDir)$(Configuration)\$(ProjectName).dll</OutputFile>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -140,9 +140,9 @@
     <ClCompile Include="libVer.cpp" />
     <ClCompile Include="lua_addons.cpp" />
     <ClCompile Include="mapUtil.cpp" />
+    <ClCompile Include="noxManifest.cpp" />
     <ClCompile Include="playerExternFunction.cpp" />
     <ClCompile Include="polygon.cpp" />
-    <ClCompile Include="SDL.cpp" />
     <ClCompile Include="SendBuffer.cpp" />
     <ClCompile Include="Libs\csha1\SHA1.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -200,7 +200,6 @@
     <ClCompile Include="spells.cpp" />
     <ClCompile Include="unit.cpp" />
     <ClCompile Include="unit2.cpp" />
-    <ClCompile Include="clientView.cpp" />
     <ClCompile Include="cliUtil.cpp" />
     <ClCompile Include="console.cpp" />
     <ClCompile Include="fxBuff.cpp" />
@@ -222,6 +221,7 @@
     <ClCompile Include="windowsUniModFunction.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="buildParameters.h" />
     <ClInclude Include="Libs\lpeg.h" />
     <ClInclude Include="Libs\csha1\SHA1.h" />
     <ClInclude Include="player.h" />
@@ -232,15 +232,11 @@
     <ClInclude Include="windowUniMod.h" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="Libs\freetype.lib" />
     <Library Include="Libs\libpng.lib" />
     <Library Include="Libs\luajit.lib" />
     <!--<Library Include="LibVer.lib" />-->
     <!--<Library Include="Libs\lua51static_mt.lib" />-->
-    <Library Include="Libs\SDL2.lib" />
-    <Library Include="Libs\SDL2_ttf.lib" />
     <Library Include="Libs\socket.lib" />
-    <Library Include="Libs\VQA.lib" />
     <Library Include="Libs\zlib.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

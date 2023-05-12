@@ -43,8 +43,6 @@ namespace
 			push 10000h
 			call noxSetGameFlags
 			push 800h
-		//	call noxClearGameFlags
-		//	push 1000000h
 			call noxClearGameFlags
 			add esp,0Ch
 			push 0
@@ -132,5 +130,5 @@ void autoServer()
 
 	InjectJumpTo(0x004012B3,&asmCheckAutoSrvFlag);
 
-	
+	announceCapability("automatic_server_hosting");
 }

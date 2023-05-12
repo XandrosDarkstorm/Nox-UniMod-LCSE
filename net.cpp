@@ -947,7 +947,6 @@ extern char *(__cdecl *mapGetName)();
 }
 extern void spellServDoCustom(int SpellArr[5],bool OnSelf,BYTE *MyPlayer,BYTE *MyUc);
 
-extern void netOnClientTryUse(BYTE *Start,BYTE *End,BYTE *MyUc,void *Player);
 extern "C" void __cdecl onNetPacketServer(BYTE *&BufStart,BYTE *E,
 		BYTE *MyPlayer, /// bigUnitStruct
 		BYTE *MyUc)/// Полученые сервером
@@ -1167,9 +1166,6 @@ extern "C" void __cdecl onNetPacketServer(BYTE *&BufStart,BYTE *E,
 				sprintf(Buf,"cmd %s",P);
 				conPrintI(Buf);
 				break;*/ // Закладка выпиливается
-			case upTryUnitUse:
-				netOnClientTryUse(P,BufStart,MyUc,MyPlayer);
-				break;
 			case upVersionRq:
 				netOnVersionRq(P,BufStart,(bigUnitStruct*)MyPlayer);
 				break;
