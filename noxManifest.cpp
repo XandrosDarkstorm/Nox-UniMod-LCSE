@@ -2,7 +2,7 @@
 #include <vector>
 
 // This list tracks our Unimod modules. Use announceCapability() function to add to this list
-std::vector<std::string> unimodCapabilities;
+std::vector<std::string> modCapabilities;
 // This list tracks user loaded modules.
 std::vector<std::string> userLuaCapabilities;
 /// <summary>
@@ -16,12 +16,11 @@ int noxClientInfoL(lua_State* L)
 	lua_setfield(L, -2, "name");
 	lua_pushstring(L, MODVERSION);
 	lua_setfield(L, -2, "version");
-	lua_createtable(L, 0, unimodCapabilities.size());
-	for (int i = 0; i < unimodCapabilities.size(); ++i)
+	lua_createtable(L, 0, modCapabilities.size());
+	for (int i = 0; i < modCapabilities.size(); ++i)
 	{
-		conPrintI(unimodCapabilities[i].c_str());
 		lua_pushnumber(L, i + 1);
-		lua_pushstring(L, unimodCapabilities[i].c_str());
+		lua_pushstring(L, modCapabilities[i].c_str());
 		lua_rawset(L, -3);
 	}
 	lua_setfield(L, -2, "base_capabilities");
@@ -34,7 +33,7 @@ int noxClientInfoL(lua_State* L)
 /// <param name="capability_name">Capability name. Please, prefer concise and meaningfull names.</param>
 void announceCapability(const char* capability_name)
 {
-	unimodCapabilities.push_back(capability_name);
+	modCapabilities.push_back(capability_name);
 }
 
 int declareLuaCapabilityL(lua_State* L)

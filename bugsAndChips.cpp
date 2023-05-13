@@ -33,34 +33,42 @@ creatureWhatDo myCreatureList;
 
 namespace
 {
-	void __declspec(naked) asmDeathBallBugGs() // для GreatSword
+	/// <summary>
+	/// Deletes DeathBall object, if it gets stuck inside Great Sword for more than 4 frames.
+	/// </summary>
+	void __declspec(naked) asmDeathBallBugGs()
 	{
+		/*
+		* X.D.: I have translated original commentaries, but i don't have firm idea what trickery
+		* is going on.
+		* I believe what is happening is that the code checks for collision framestamp
+		*/
 		__asm
 		{
 			call noxUnitSetOwner
 			add esp,0Ch
 			cmp [ebx+4],02C2h
 			jnz exitL
-			mov eax,[ebx+2DCh] // теперь это время последнего коллайда
+			mov eax,[ebx+2DCh] // last collision time
 			mov ecx,frameCounter
 			mov ecx,[ecx+0]
-			test eax,eax // если у нас там 0, то пишем время и выходим
+			test eax,eax // if collision time is zero, keep going
 			jnz l1
 			obnul:
 			mov [ebx+2DCh],ecx
 			mov [ebx+2E0h],0
 			jmp exitL
-			l1: // если не ноль то смотрим что и действуем
+			l1: //if collision time is not zero - check frames
 			sub ecx,eax
 			cmp ecx,4
-			ja obnul // если прошло больше 4 кадров
+			ja obnul // if more than 4 frames passed jump to obnul
 			mov ecx,[ebx+2E0h]
 			inc ecx
 			mov [ebx+2E0h],ecx
 			cmp ecx,3
 			jna exitL
 			push ebx
-			call noxDeleteObject //удаляем наконец
+			call noxDeleteObject
 			add esp,4
 
 			exitL:
@@ -69,45 +77,51 @@ namespace
 		}
 	}
 
-	void __declspec(naked) asmDeathBallBugSh() // для Shield
+	/// <summary>
+	/// Deletes DeathBall object, if it gets stuck inside Warrior's shield for more than 4 frames.
+	/// </summary>
+	void __declspec(naked) asmDeathBallBugSh()
 	{
+		//This code is the same as asmDeathBallBugGs, except for one value, commented in the code.
 		__asm
 		{
 			call noxUnitSetOwner
 			add esp,0Ch
 			cmp [ebx+4],02C2h
 			jnz exitL
-			mov eax,[ebx+2DCh] // теперь это время последнего коллайда
+			mov eax,[ebx+2DCh]
 			mov ecx,frameCounter
 			mov ecx,[ecx+0]
-			test eax,eax // если у нас там 0, то пишем время и выходим
+			test eax,eax
 			jnz l1
 			obnul:
 			mov [ebx+2DCh],ecx
 			mov [ebx+2E0h],0
 			jmp exitL
-			l1: // если не ноль то смотрим что и действуем
+			l1:
 			sub ecx,eax
 			cmp ecx,4
-			ja obnul // если прошло больше 4 кадров
+			ja obnul
 			mov ecx,[ebx+2E0h]
 			inc ecx
 			mov [ebx+2E0h],ecx
 			cmp ecx,3
 			jna exitL
 			push ebx
-			call noxDeleteObject //удаляем наконец
+			call noxDeleteObject
 			add esp,4
 
 			exitL:
-			push 004E1BDEh
+			push 004E1BDEh //This value is different
 			ret
 		}
 	}
 
 
-
-	void __declspec(naked) asmConjSummonEnotherCmp() // добавляем ПКМ
+	/// <summary>
+	/// Allows right click on creature inside Summoned Creatures window
+	/// </summary>
+	void __declspec(naked) asmConjSummonAnotherCmp()
 	{
 		__asm
 		{
@@ -170,8 +184,11 @@ namespace
 		netClientSend(0x1F,0,&P,4);
 		lua_settop(L,Top);
 	}
-		
-	void __declspec(naked) asmConjSummonDo() // когда нажали на моба
+	
+	/// <summary>
+	/// This code determines what to do, when player clicks on creature in Summoned Creatures window.
+	/// </summary>
+	void __declspec(naked) asmConjSummonDo()
 	{
 		__asm
 		{
@@ -179,15 +196,15 @@ namespace
 			push eax
 			mov eax,wndConjSummonMsg
 			cmp eax,9
-			jz l1
-			push 0
+			jz l1 //if we right clicked on it - order BANISH.
+			push 0 //if we are here - we made a left click and cycle through orders
 			call conjSummonDo
 			jmp lex
-			l1: // если ПКМ то убиваем моба
+			l1:
 			push 1
 			call conjSummonDo
 
-			lex: // выходим из сабы
+			lex: // returning from subroutine
 			add esp,8
 			push 004C2BBEh
 			ret
@@ -351,50 +368,45 @@ extern void InjectJumpTo(DWORD Addr,void *Fn);
 
 void topicOverrideInit()
 {
+	//X.D.: What the hell is that? What does it do?
 	byte nop[2] = { 0x90, 0x90 };
 	//InjectData(0x0040C29B, nop, 2);
 }
 
-int (__cdecl *netOnPacketRecvServ)(int playerId, char *packet, int length);
-// Validates incoming player data in order to prevent rogue players crashing the server
-int __cdecl netOnPacketRecvServ_Hook(int playerId, char *packet, int length)
+
+/// <summary>
+/// Checks if player joing packet contains valid data and is the right length.
+/// </summary>
+/// <param name="packet">Packet data</param>
+/// <param name="length">Packet length</param>
+bool isPlayerDataPacketValid(char* packet, int length)
 {
 	if (*packet == 0x20 && length < 0x9A)
-	{
-		char test[60];
-		sprintf(test,"[UniMod] Wrong player data len detected: 0x%X", length);
-		conPrintI(test);
-		// Go away, little bugger
-		return 0;
-	}
-
+		return false;
 	packet++;
-	/*
-	Check if nickname starts with unprintable character
-	This can only happen if client's character data is malformed or packet was sent directly.
-	Do not accept the player.
-	*/
+	//Check if nickname starts with unprintable character
 	if (packet[0] < ' ')
-	{
-		conPrintI("Rejected join request.");
-		return 0;
-	}
+		return false;
 
-	// Check if player class is invalid
-	if (packet[0x42] >= 3)
-	{
-		packet[0x42] = 0;
-		conPrintI("[UniMod] Bugged player class was detected!");
-	}
+	// Check if player class is invalid (id is 2 maximum)
+	if (packet[0x42] > 2)
+		return false;
 
 	// Check if player object requested by client is invalid
 	if (packet[0x43] > 0)
-	{
-		packet[0x43] = 0;
-		conPrintI("[UniMod] Bugged player object was detected!");
-	}
-	packet--;
+		return false;
 
+	packet--;
+	return true;
+}
+
+int(__cdecl* netOnPacketRecvServ)(int playerId, char* packet, int length);
+// Validates incoming player data in order to prevent rogue players crashing the server
+int __cdecl netOnPacketRecvServ_Hook(int playerId, char *packet, int length)
+{
+	//If malformed join request received or character file is malformed - ignore the request.
+	if (!isPlayerDataPacketValid(packet, length))
+		return 0;
 	// Carry on
 	return netOnPacketRecvServ(playerId, packet, length);
 }
@@ -412,13 +424,17 @@ void bugsInit()
 	ASSIGN(wndSummonCreateList,0x004C2560);
 	ASSIGN(cliSummondWndLoad,0x004C2E50);
 
+#ifdef FIX_FON_BLOCK_GREATSWORD
 	InjectJumpTo(0x004E1C8A,&asmDeathBallBugGs);
 	announceCapability("fix_force_of_nature_greatsword_block");
+#endif
+#ifdef FIX_FON_BLOCK_SHIELD
 	InjectJumpTo(0x004E1BD6,&asmDeathBallBugSh);
 	announceCapability("fix_force_of_nature_shield_block");
+#endif
 
 #ifdef CONJURER_SUMMON_QUICK_CONTROL
-	InjectJumpTo(0x004C2BC7,&asmConjSummonEnotherCmp); // support right-clicking on creatures in UI
+	InjectJumpTo(0x004C2BC7,&asmConjSummonAnotherCmp); // support right-clicking on creatures in UI
 	InjectJumpTo(0x004C2BB6,&asmConjSummonDo); // Replace list with quick action processor code
 	InjectJumpTo(0x0049179A,&asmConjSummonCreate);
 	InjectJumpTo(0x004C2ACC,&asmConjSummonDoAll);
@@ -427,16 +443,16 @@ void bugsInit()
 	announceCapability("conjurer_summon_quick_commands");
 #endif
 
+#ifdef FIX_CAST_FIREBALL
 	InjectJumpTo(0x0052C7CD,&asmFixCastFireball);
-
+	announceCapability("fix_cast_fireball");
+#endif
 	// TODO: convert all similar hardcoded-switches into #defines in a separate file
+	
+#ifdef FIX_REJECT_MALFORMED_JOIN
 	// Validates incoming player data in order to prevent rogue players crashing the server
-	bool filterPlayerJoinData=true; 
-	if (filterPlayerJoinData)
-	{
-		InjectOffs(0x4DEC40 + 1, &netOnPacketRecvServ_Hook);
-		announceCapability("fix_malformed_character_join");
-	}
 	ASSIGN(netOnPacketRecvServ, 0x51BAD0);
-
+	InjectOffs(0x4DEC40 + 1, &netOnPacketRecvServ_Hook);
+	announceCapability("fix_malformed_character_join");
+#endif
 }

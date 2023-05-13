@@ -222,6 +222,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buildParameters.h" />
+    <ClInclude Include="input_info.h" />
     <ClInclude Include="Libs\lpeg.h" />
     <ClInclude Include="Libs\csha1\SHA1.h" />
     <ClInclude Include="player.h" />
