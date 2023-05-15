@@ -150,7 +150,7 @@ namespace
 	int __cdecl consoleEditProcNew(void* Window,int Msg,int keyCode,int keyState)
 	{
 		BYTE *P=(BYTE*)Window;
-		//TODO: the comment below is garbage. Consult KirConjurer if this is recorded somewhere.
+		//TODO: X.D> the comment below is garbage. Consult KirConjurer if this is recorded somewhere.
 		//conPrintI((std::string("MSG: ") + std::to_string(Msg)).c_str());
 		//conPrintI((std::string("A: ") + std::to_string(keyCode)).c_str());
 		//conPrintI((std::string("B: ") + std::to_string(keyState)).c_str());
@@ -164,10 +164,14 @@ namespace
 		if (Msg == noxWindowEvents::KEYBOARD_INPUT)
 		{
 			P=*((BYTE**)(P+0x20));//Capture string data
+			/*
+			X.D> I do not know the codes for all buttons.
+			If somebody wants to help -- please, assign debug_kbd to something in the game and send KEYCODE RAW values
+			and their associated buttons to "Issues" of the Nox LCSE repository.
+			*/
 			lua_getglobal(L, "debug_kbd");
 			if (lua_type(L, -1) != LUA_TNIL)
 			{
-				conPrintI((std::string("KEYSTATE: ") + std::to_string(keyState)).c_str());
 				conPrintI((std::string("KEYCODE RAW: ") + std::to_string(keyCode)).c_str());
 			}
 			if (keyState == noxKeyboardEvents::KEY_RELEASE)
@@ -194,7 +198,6 @@ namespace
 			else if (keyState == noxKeyboardEvents::KEY_PRESS)
 			{
 				std::wstring console_cmd((const wchar_t*) P);
-				int cmd_length=console_cmd.size();
 				bool skipNoxProcessing = true;
 
 				/*
@@ -244,7 +247,7 @@ namespace
 					break;
 					
 					case noxKeyboardKeys::KBD_RIGHT:
-						if (conCursorPosition < cmd_length)
+						if (conCursorPosition < console_cmd.size())
 						{
 							if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
 								conCursorPosition = findWordCloseToCursor(console_cmd, conCursorPosition, false);
@@ -258,28 +261,34 @@ namespace
 					break;
 
 					case noxKeyboardKeys::KBD_END:
-						conCursorPosition = cmd_length;
+						conCursorPosition = console_cmd.size();
 					break;
 
 					//Text editing
 					case noxKeyboardKeys::KBD_DELETE:
 						//Only work when we are not at the end.
-						if (conCursorPosition != cmd_length)
+						if (conCursorPosition != console_cmd.size())
 						{
-							console_cmd.erase(conCursorPosition, 1);
+							int cut_size = 1;
+							if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
+								cut_size = findWordCloseToCursor(console_cmd, conCursorPosition, false) - conCursorPosition;
+							console_cmd.erase(conCursorPosition, cut_size);
 							noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
-							lenStrOld--;
+							lenStrOld -= cut_size;
 						}						
 					break;
 
 					case noxKeyboardKeys::KBD_BACKSPACE:
 						//Only work when we are not at the start.
-						if (cmd_length > 0 && conCursorPosition > 0)
+						if (console_cmd.size() > 0 && conCursorPosition > 0)
 						{
-							console_cmd.erase(conCursorPosition - 1, 1);
+							int cut_size = 1;
+							if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
+								cut_size = conCursorPosition - findWordCloseToCursor(console_cmd, conCursorPosition, true);
+							console_cmd.erase(conCursorPosition - cut_size, cut_size);
 							noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
-							conCursorPosition--;
-							lenStrOld--;
+							conCursorPosition -= cut_size;
+							lenStrOld -= cut_size;
 						}						
 					break;
 
@@ -311,10 +320,10 @@ namespace
 										* Only 1 line of text is allowed.
 										* Control characters are not allowed.
 										*/
-										for (; clipboard_text_length < strlen(clipboard_text) && clipboard_text_length + cmd_length < MAX_CONSOLE_COMMAND_LENGTH; ++clipboard_text_length)
+										for (; clipboard_text_length < strlen(clipboard_text) &&
+											clipboard_text_length + console_cmd.size() < MAX_CONSOLE_COMMAND_LENGTH; ++clipboard_text_length)
 										{
-											if (clipboard_text[clipboard_text_length] == 0)
-												break;
+											//If character code is below the first printable character code (space)
 											if (clipboard_text[clipboard_text_length] < 32)
 												break;
 										}
@@ -586,6 +595,7 @@ void consoleInit()
 	InjectJumpTo(0x004884C5 ,&consoleEditDraw); // Меняем размеры
 	InjectJumpTo(0x450B90 ,&onPrintConsoleTrap);
 
+	//TODO: X.D> The next 6 lines must be removed in the end.
 	lua_newtable(L); // делаем таблицу для строк
 	lua_pushinteger(L,1);
 	lua_setfield(L,-2,"lastItem");
@@ -594,4 +604,5 @@ void consoleInit()
 	lua_setglobal(L,"conStr");
 
 	registerserver("conExec",&conExecL);
+	announceCapability("console_mods");
 }
