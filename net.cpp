@@ -56,8 +56,6 @@ void *(__cdecl *playerCheckDuplicateNames)(void* playerInfo);
 
 int clientsVersions[0x20];
 
-extern bool replayPacketHandler(BYTE *&BufStart, BYTE *&E, bool &found);
-
 bigUnitStruct *netUnitByCodeServ(DWORD NetCode)
 {
 	if (NetCode & 0x8000)
@@ -860,7 +858,6 @@ void __cdecl onNetPacketClient(BYTE *&BufStart,BYTE *E)/// Полученые клиентом
 	while(found)
 	{
 		found=false;
-		replayPacketHandler(BufStart, E, found); //По умолчанию false
 		BYTE *P=BufStart;
 		if (*P==186)
 			netOnAbortDownload();

@@ -40,8 +40,6 @@ extern bool specialAuthorisation; //Отключение альтернативной авторизации
 
 u_int hostIdx = 0x1F;
 
-extern void replayEachFrame();
-
 char* gameDirectory;
 
 int (__cdecl *initWindowedModeNox)(int param1, int param2, int param3);
@@ -1018,7 +1016,6 @@ namespace
 	}
 	void __cdecl onEachFrame()
 	{
-		replayEachFrame();
 #ifdef RCON_HTTP_SERVER
 		if(specialAuthorisation)
 			for(int i=0; i<0x20; i++)
@@ -1184,7 +1181,6 @@ extern void consoleInit();
 extern void playerFunctionInint();
 extern void spriteInit();
 extern void spellListInit();
-extern void clientViewInit();
 extern void unitDefsInit();
 extern void tilesInit();
 extern void cliUntilInit();
@@ -1193,7 +1189,6 @@ extern void polygonInit();
 extern void bugsInit();
 extern void autoServer();
 extern "C" void scoreInit(lua_State *L);
-extern "C" void replayInit(lua_State *L);
 
 extern "C" void initAudServer(lua_State *L);
 
@@ -1371,7 +1366,6 @@ void initStepTwo()
 	spellListInit();
 	guiInit();
 	scoreInit(L);
-	replayInit(L);
 	waypointsInit();
 	cliUntilInit();
 	polygonInit();

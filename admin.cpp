@@ -8,7 +8,6 @@
 #include <algorithm>
 //:004317B0 configLoad(const char*)
 //00433290 configSave
-extern void replayGuiUpdate();
 extern bool serverStart(int port);
 extern void serverClose();
 extern char *(__cdecl *mapGetName)();
@@ -16,7 +15,7 @@ extern DWORD *GameFlags;
 extern void tputs(int s,const char *S);
 extern int tprintf(int s,const char *Format,...);
 extern void send_headers(int f, int status, char *title, char *extra, char *mime, 
-                  int length, time_t date);
+				  int length, time_t date);
 extern void send_error(int f, int status, char *title, char *extra, char *text);
 
 void (__cdecl *guiServerOptionsStartGameMB)();
@@ -1076,12 +1075,6 @@ namespace
 			needToFormGame=false;
 			doFormGame();
 		}
-		replayGuiUpdate();
-		/*if(replayViewFormGameRequest)
-		{
-			replayViewFormGameRequest=false;
-			replayViewFormGame();
-		}*/
 	}
 
 	void* onPlayerLeave(byte Index)
