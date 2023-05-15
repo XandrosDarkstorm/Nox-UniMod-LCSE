@@ -161,365 +161,380 @@ namespace
 		* 
 		* keyState is only a key state.
 		*/
-		if (Msg == noxWindowEvents::KEYBOARD_INPUT)
+
+		//We do not support mouse operations yet.
+		if (Msg != noxWindowEvents::KEYBOARD_INPUT)
+			return consoleEditProc(Window, Msg, keyCode, keyState);
+
+		//Keyboard input processing
+		P=*((BYTE**)(P+0x20));//Capture string data
+		/*
+		X.D> I do not know the codes for all keyboard buttons.
+		If somebody wants to help -- please, assign debug_kbd to something in the game and send KEYCODE RAW values
+		and their associated buttons to "Issues" of the Nox LCSE repository.
+		*/
+		lua_getglobal(L, "debug_kbd");
+		if (lua_type(L, -1) != LUA_TNIL)
 		{
-			P=*((BYTE**)(P+0x20));//Capture string data
-			/*
-			X.D> I do not know the codes for all buttons.
-			If somebody wants to help -- please, assign debug_kbd to something in the game and send KEYCODE RAW values
-			and their associated buttons to "Issues" of the Nox LCSE repository.
-			*/
-			lua_getglobal(L, "debug_kbd");
-			if (lua_type(L, -1) != LUA_TNIL)
+			conPrintI((std::string("KEYCODE RAW: ") + std::to_string(keyCode)).c_str());
+		}
+		if (keyState == noxKeyboardEvents::KEY_RELEASE)
+		{
+			switch (keyCode)
 			{
-				conPrintI((std::string("KEYCODE RAW: ") + std::to_string(keyCode)).c_str());
-			}
-			if (keyState == noxKeyboardEvents::KEY_RELEASE)
-			{
-				switch (keyCode)
-				{
-					case noxKeyboardKeys::KBD_SHIFT_LEFT:
-					case noxKeyboardKeys::KBD_SHIFT_RIGHT:
-						conKeyboardModifiers &= !keyboardModifiers::KBDMOD_SHIFT;
-					break;
-
-					case noxKeyboardKeys::KBD_CTRL_LEFT:
-					case noxKeyboardKeys::KBD_CTRL_RIGHT:
-						conKeyboardModifiers &= !keyboardModifiers::KBDMOD_CTRL;
-					break;
-
-					case noxKeyboardKeys::KBD_ALT_LEFT:
-					case noxKeyboardKeys::KBD_ALT_RIGHT:
-						conKeyboardModifiers &= !keyboardModifiers::KBDMOD_ALT;
-					break;
-				}
-				
-			}
-			else if (keyState == noxKeyboardEvents::KEY_PRESS)
-			{
-				std::wstring console_cmd((const wchar_t*) P);
-				bool skipNoxProcessing = true;
-
-				/*
-				* Double check the key modifiers.
-				* This is required to fix situation when key modifiers get stuck in
-				* the pressed position during window switch (Nox quirk).
-				* GetKeyState is not reliable by itself (sometimes it lags a bit, comparing to capture from Nox directly)
-				*/
-				if (conKeyboardModifiers & keyboardModifiers::KBDMOD_SHIFT && !HIWORD(GetKeyState(VK_SHIFT)))
+				case noxKeyboardKeys::KBD_SHIFT_LEFT:
+				case noxKeyboardKeys::KBD_SHIFT_RIGHT:
 					conKeyboardModifiers &= !keyboardModifiers::KBDMOD_SHIFT;
-				if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL && !HIWORD(GetKeyState(VK_CONTROL)))
+				break;
+
+				case noxKeyboardKeys::KBD_CTRL_LEFT:
+				case noxKeyboardKeys::KBD_CTRL_RIGHT:
 					conKeyboardModifiers &= !keyboardModifiers::KBDMOD_CTRL;
-				if (conKeyboardModifiers & keyboardModifiers::KBDMOD_ALT && !HIWORD(GetKeyState(VK_MENU)))
+				break;
+
+				case noxKeyboardKeys::KBD_ALT_LEFT:
+				case noxKeyboardKeys::KBD_ALT_RIGHT:
 					conKeyboardModifiers &= !keyboardModifiers::KBDMOD_ALT;
+				break;
+			}
+				
+		}
+		else if (keyState == noxKeyboardEvents::KEY_PRESS)
+		{
+			std::wstring console_cmd((const wchar_t*) P);
+			bool skipNoxProcessing = true;
 
-				//Process the key
-				switch (keyCode)
-				{
-					//Key modifiers. We don't replace the behavior - we only need to track modifiers.
-					case noxKeyboardKeys::KBD_SHIFT_LEFT:
-					case noxKeyboardKeys::KBD_SHIFT_RIGHT:
-						conKeyboardModifiers |= keyboardModifiers::KBDMOD_SHIFT;
-						skipNoxProcessing = false;
-					break;
+			/*
+			* Double check the key modifiers.
+			* This is required to fix situation when key modifiers get stuck in
+			* the pressed position during window switch (Nox quirk).
+			* GetKeyState is not reliable by itself (sometimes it lags a bit, comparing to capture from Nox directly)
+			*/
+			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_SHIFT && !HIWORD(GetKeyState(VK_SHIFT)))
+				conKeyboardModifiers &= !keyboardModifiers::KBDMOD_SHIFT;
+			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL && !HIWORD(GetKeyState(VK_CONTROL)))
+				conKeyboardModifiers &= !keyboardModifiers::KBDMOD_CTRL;
+			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_ALT && !HIWORD(GetKeyState(VK_MENU)))
+				conKeyboardModifiers &= !keyboardModifiers::KBDMOD_ALT;
 
-					case noxKeyboardKeys::KBD_CTRL_LEFT:
-					case noxKeyboardKeys::KBD_CTRL_RIGHT:
-						conKeyboardModifiers |= keyboardModifiers::KBDMOD_CTRL;
-						skipNoxProcessing = false;
-					break;
+			//Process the key
+			switch (keyCode)
+			{
+				//Key modifiers. We don't replace the behavior - we only need to track modifiers.
+				case noxKeyboardKeys::KBD_SHIFT_LEFT:
+				case noxKeyboardKeys::KBD_SHIFT_RIGHT:
+					conKeyboardModifiers |= keyboardModifiers::KBDMOD_SHIFT;
+					skipNoxProcessing = false;
+				break;
 
-					case noxKeyboardKeys::KBD_ALT_LEFT:
-					case noxKeyboardKeys::KBD_ALT_RIGHT:
-						conKeyboardModifiers |= keyboardModifiers::KBDMOD_ALT;
-						skipNoxProcessing = false;
-					break;
+				case noxKeyboardKeys::KBD_CTRL_LEFT:
+				case noxKeyboardKeys::KBD_CTRL_RIGHT:
+					conKeyboardModifiers |= keyboardModifiers::KBDMOD_CTRL;
+					skipNoxProcessing = false;
+				break;
 
-					//Cursor movement
-					case noxKeyboardKeys::KBD_LEFT:
-						if (conCursorPosition > 0)
-						{
-							if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
-								conCursorPosition = findWordCloseToCursor(console_cmd, conCursorPosition, true);
-							else
-								conCursorPosition--;
-						}
-					break;
-					
-					case noxKeyboardKeys::KBD_RIGHT:
-						if (conCursorPosition < console_cmd.size())
-						{
-							if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
-								conCursorPosition = findWordCloseToCursor(console_cmd, conCursorPosition, false);
-							else
-								conCursorPosition++;
-						}
-					break;
+				case noxKeyboardKeys::KBD_ALT_LEFT:
+				case noxKeyboardKeys::KBD_ALT_RIGHT:
+					conKeyboardModifiers |= keyboardModifiers::KBDMOD_ALT;
+					skipNoxProcessing = false;
+				break;
 
-					case noxKeyboardKeys::KBD_HOME:
-						conCursorPosition = 0;
-					break;
-
-					case noxKeyboardKeys::KBD_END:
-						conCursorPosition = console_cmd.size();
-					break;
-
-					//Text editing
-					case noxKeyboardKeys::KBD_DELETE:
-						//Only work when we are not at the end.
-						if (conCursorPosition != console_cmd.size())
-						{
-							int cut_size = 1;
-							if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
-								cut_size = findWordCloseToCursor(console_cmd, conCursorPosition, false) - conCursorPosition;
-							console_cmd.erase(conCursorPosition, cut_size);
-							noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
-							lenStrOld -= cut_size;
-						}						
-					break;
-
-					case noxKeyboardKeys::KBD_BACKSPACE:
-						//Only work when we are not at the start.
-						if (console_cmd.size() > 0 && conCursorPosition > 0)
-						{
-							int cut_size = 1;
-							if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
-								cut_size = conCursorPosition - findWordCloseToCursor(console_cmd, conCursorPosition, true);
-							console_cmd.erase(conCursorPosition - cut_size, cut_size);
-							noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
-							conCursorPosition -= cut_size;
-							lenStrOld -= cut_size;
-						}						
-					break;
-
-					case noxKeyboardKeys::KBD_V:
+				//Cursor movement
+				case noxKeyboardKeys::KBD_LEFT:
+					if (conCursorPosition > 0)
+					{
 						if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
-						{
-							/*
-							* Clipboard paste. Only supports ANSI encoded plain text.
-							*/
+							conCursorPosition = findWordCloseToCursor(console_cmd, conCursorPosition, true);
+						else
+							conCursorPosition--;
+					}
+				break;
+					
+				case noxKeyboardKeys::KBD_RIGHT:
+					if (conCursorPosition < console_cmd.size())
+					{
+						if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
+							conCursorPosition = findWordCloseToCursor(console_cmd, conCursorPosition, false);
+						else
+							conCursorPosition++;
+					}
+				break;
 
-							if (console_cmd.length() == MAX_CONSOLE_COMMAND_LENGTH)
-								break; //Do not worry about pasting - there is no space for it anyway.
+				case noxKeyboardKeys::KBD_HOME:
+					conCursorPosition = 0;
+				break;
 
-							if (!IsClipboardFormatAvailable(CF_TEXT))
-								break;
+				case noxKeyboardKeys::KBD_END:
+					conCursorPosition = console_cmd.size();
+				break;
+
+				//Text editing
+				case noxKeyboardKeys::KBD_DELETE:
+					//Only work when we are not at the end.
+					if (conCursorPosition != console_cmd.size())
+					{
+						int cut_size = 1;
+						if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
+							cut_size = findWordCloseToCursor(console_cmd, conCursorPosition, false) - conCursorPosition;
+						console_cmd.erase(conCursorPosition, cut_size);
+						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
+						lenStrOld -= cut_size;
+					}						
+				break;
+
+				case noxKeyboardKeys::KBD_BACKSPACE:
+					//Only work when we are not at the start.
+					if (console_cmd.size() > 0 && conCursorPosition > 0)
+					{
+						int cut_size = 1;
+						if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
+							cut_size = conCursorPosition - findWordCloseToCursor(console_cmd, conCursorPosition, true);
+						console_cmd.erase(conCursorPosition - cut_size, cut_size);
+						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
+						conCursorPosition -= cut_size;
+						lenStrOld -= cut_size;
+					}						
+				break;
+
+				case noxKeyboardKeys::KBD_V:
+					if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
+					{
+						/*
+						* Clipboard paste. Only supports ANSI encoded plain text.
+						*/
+
+						if (console_cmd.length() == MAX_CONSOLE_COMMAND_LENGTH)
+							break; //Do not worry about pasting - there is no space for it anyway.
+
+						if (!IsClipboardFormatAvailable(CF_TEXT))
+							break;
 								
-							BOOL is_clipbrd_opened = OpenClipboard(NULL);
-							if (is_clipbrd_opened)
+						BOOL is_clipbrd_opened = OpenClipboard(NULL);
+						if (is_clipbrd_opened)
+						{
+							HANDLE clipboard_obj = GetClipboardData(CF_TEXT);
+							if (clipboard_obj)
 							{
-								HANDLE clipboard_obj = GetClipboardData(CF_TEXT);
-								if (clipboard_obj)
+								LPTSTR clipboard_text = (LPTSTR)GlobalLock(clipboard_obj);
+								int clipboard_text_length = 0;
+								if (clipboard_text)
 								{
-									LPTSTR clipboard_text = (LPTSTR)GlobalLock(clipboard_obj);
-									int clipboard_text_length = 0;
-									if (clipboard_text)
+									/*
+									* Sanitize the clipboard:
+									* Only 1 line of text is allowed.
+									* Control characters are not allowed.
+									*/
+									for (; clipboard_text_length < strlen(clipboard_text) &&
+										clipboard_text_length + console_cmd.size() < MAX_CONSOLE_COMMAND_LENGTH; ++clipboard_text_length)
 									{
-										/*
-										* Sanitize the clipboard:
-										* Only 1 line of text is allowed.
-										* Control characters are not allowed.
-										*/
-										for (; clipboard_text_length < strlen(clipboard_text) &&
-											clipboard_text_length + console_cmd.size() < MAX_CONSOLE_COMMAND_LENGTH; ++clipboard_text_length)
-										{
-											//If character code is below the first printable character code (space)
-											if (clipboard_text[clipboard_text_length] < 32)
-												break;
-										}
-
-										if (clipboard_text_length > 0)
-										{
-
-											wchar_t *clipboardTextWide = new wchar_t[clipboard_text_length + 1];
-											mbstowcs(clipboardTextWide, clipboard_text, clipboard_text_length);
-											clipboardTextWide[clipboard_text_length] = 0;
-											console_cmd.insert(conCursorPosition, clipboardTextWide);
-											noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
-											conCursorPosition += clipboard_text_length;
-											lenStrOld += clipboard_text_length;
-										}										
+										//If character code is below the first printable character code (space)
+										if (clipboard_text[clipboard_text_length] < 32)
+											break;
 									}
-									GlobalUnlock(clipboard_obj);
+
+									if (clipboard_text_length > 0)
+									{
+
+										wchar_t *clipboardTextWide = new wchar_t[clipboard_text_length + 1];
+										mbstowcs(clipboardTextWide, clipboard_text, clipboard_text_length);
+										clipboardTextWide[clipboard_text_length] = 0;
+										console_cmd.insert(conCursorPosition, clipboardTextWide);
+										noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
+										conCursorPosition += clipboard_text_length;
+										lenStrOld += clipboard_text_length;
+									}										
 								}
-								CloseClipboard();
+								GlobalUnlock(clipboard_obj);
 							}
-							else
-							{
-								conPrintI("ERROR: Failed to open clipboard!");
-							}
+							CloseClipboard();
 						}
 						else
-							skipNoxProcessing = false;
-					break;
-
-					//Command history
-					case noxKeyboardKeys::KBD_UP:
-						conPrintI("History scroll UP");
-						/*int Top = lua_gettop(L); // запоминаем что в начале
-						lua_getglobal(L, "conStr");
-						if (lua_type(L, -1) != LUA_TTABLE) // если там нил например
 						{
-							lua_settop(L, Top);
-							return 1;
+							conPrintI("ERROR: Failed to open clipboard!");
 						}
-						lua_getfield(L, -1, "lastItem");
-						int lastI = lua_tointeger(L, -1); // для удобства
-						lua_getfield(L, -2, "lastStr");
-						int lastS = lua_tointeger(L, -1);
-						lastS--;
-						if (lastS < 1) lastS = luaL_getn(L, -3);
-						if (lastS != lastI)
-						{
-							//lastS(старый) lastI [таблица]
-							lua_pushinteger(L, lastS);
-							lua_setfield(L, -4, "lastStr");
-						}
-						lua_rawgeti(L, -3, lastS);
-						if (lua_type(L, -1) != LUA_TSTRING) // если там не строка а нил например
-						{
-							lua_settop(L, Top);
-							return 1;
-						}
-						const char* V = lua_tostring(L, -1);
-						lua_pop(L, 3);
-						wchar_t* W = (wchar_t*)P;
-						mbstowcs(W, V, 300);
-						noxCallWndProc(Window, 0x401E, (int)(W), -1);
-						W[strlen(V)] = 0;/// на всякий случай припишем 0
-						conCursorPosition = strlen(V); // Помещаем в конец курсорчик
-						lenStrOld = strlen(V);
-						lua_settop(L, Top);*/
-					break;
-
-					case noxKeyboardKeys::KBD_DOWN:
-						conPrintI("History scroll down");
-						/*int Top = lua_gettop(L); // запоминаем что в начале
-						lua_getglobal(L, "conStr");
-						if (lua_type(L, -1) != LUA_TTABLE) // если там нил например
-						{
-							lua_settop(L, Top);
-							return 1;
-						}
-						lua_getfield(L, -1, "lastItem");
-						int lastI = lua_tointeger(L, -1); // для удобства
-						lua_getfield(L, -2, "lastStr");
-						int lastS = lua_tointeger(L, -1);
-						lastS++;
-						if (lastS > 50 || lastS > luaL_getn(L, -3)) lastS = 1;
-						if (lastS != lastI)
-						{
-							//lastS(старый) lastI [таблица]
-							lua_pushinteger(L, lastS);
-							lua_setfield(L, -4, "lastStr");
-						}
-						lua_rawgeti(L, -3, lastS);
-						if (lua_type(L, -1) != LUA_TSTRING) // если там не строка а нил например
-						{
-							lua_settop(L, Top);
-							return 1;
-						}
-						const char* V = lua_tostring(L, -1);
-						lua_pop(L, 3);
-						wchar_t* W = (wchar_t*)P;
-						mbstowcs(W, V, 300);
-						noxCallWndProc(Window, 0x401E, (int)(W), -1);
-						W[strlen(V)] = 0;// на всякий случай припишем 0
-						conCursorPosition = strlen(V); // курсор в конец
-						lenStrOld = strlen(V);
-						lua_settop(L, Top);*/
-					break;
-
-					//Execute command
-					case noxKeyboardKeys::KBD_ENTER:
-					case noxKeyboardKeys::KBD_KP_ENTER:
-						conPrintI("History is not available yet.");
-						conCursorPosition = 0; // курсор в начало
-						lenStrOld = 0;
-						consoleProcFn();// Вызываем обработку
-					break;
-					default:
-						skipNoxProcessing = false;
-				}
-				/*Remove this block after testing!
-				std::string debug_modifiers;
-
-				if (conKeyboardModifiers & keyboardModifiers::KBDMOD_SHIFT)
-					debug_modifiers += "[SHIFT]";
-				if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
-					debug_modifiers += "[CTRL]";
-				if (conKeyboardModifiers & keyboardModifiers::KBDMOD_ALT)
-					debug_modifiers += "[ALT]";
-				if (HIWORD(GetKeyState(VK_SHIFT)))
-					debug_modifiers += "[SHIFT]";
-				if (HIWORD(GetKeyState(VK_CONTROL)))
-					debug_modifiers += "[CTRL]";
-				if (HIWORD(GetKeyState(VK_MENU)))
-					debug_modifiers += "[ALT]";
-				conPrintI(debug_modifiers.c_str());
-				//debug. how long is the command
-				//conPrintI(std::to_string(console_cmd.length()).c_str());*/
-				
-				if (skipNoxProcessing)
-					return 1; //Prevent additional processing by Nox
-				
-				/*if (keyCode==0x1C) // нажали энтер?
-				{
-					int Top=lua_gettop(L); // запоминаеем что в начале
-					char string[300]="";
-					wchar_t *W=(wchar_t*)P;
-					int Len=wcslen(W);
-					wcstombs(string,W,Len);
-					lua_getglobal(L,"conStr");
-					if (lua_type(L,-1)!=LUA_TTABLE)
-					{
-						lua_newtable(L);
-						lua_pushvalue(L,-1);
-						lua_setglobal(L,"conStr");
 					}
-					if (Len==0) 
+					else
+						skipNoxProcessing = false;
+				break;
+
+				case noxKeyboardKeys::KBD_ESC:
+					if (console_cmd.length() > 0)
 					{
-						lua_settop(L,Top);
-						consoleProcFn();// Вызываем обработку
+						//Clear console input textbox.
+						console_cmd = L"";
+						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
+						conCursorPosition = 0;
+						lenStrOld = 0;
+					}
+					else //If console input textbox is clean -- close the console (which is default Nox behavior)
+						skipNoxProcessing = false;
+				break;
+
+				//Command history
+				case noxKeyboardKeys::KBD_UP:
+					conPrintI("History scroll UP");
+					/*int Top = lua_gettop(L); // запоминаем что в начале
+					lua_getglobal(L, "conStr");
+					if (lua_type(L, -1) != LUA_TTABLE) // если там нил например
+					{
+						lua_settop(L, Top);
 						return 1;
 					}
-					lua_getfield(L,-1,"lastItem"); // достаем последний элемент 
-					int lastI=lua_tointeger(L,-1)+1;
-					if (lastI>50)
-						lastI=1;
-					lua_pop(L,1);
-					lua_pushinteger(L,lastI);
-					lua_setfield(L,-2,"lastItem"); 
+					lua_getfield(L, -1, "lastItem");
+					int lastI = lua_tointeger(L, -1); // для удобства
+					lua_getfield(L, -2, "lastStr");
+					int lastS = lua_tointeger(L, -1);
+					lastS--;
+					if (lastS < 1) lastS = luaL_getn(L, -3);
+					if (lastS != lastI)
+					{
+						//lastS(старый) lastI [таблица]
+						lua_pushinteger(L, lastS);
+						lua_setfield(L, -4, "lastStr");
+					}
+					lua_rawgeti(L, -3, lastS);
+					if (lua_type(L, -1) != LUA_TSTRING) // если там не строка а нил например
+					{
+						lua_settop(L, Top);
+						return 1;
+					}
+					const char* V = lua_tostring(L, -1);
+					lua_pop(L, 3);
+					wchar_t* W = (wchar_t*)P;
+					mbstowcs(W, V, 300);
+					noxCallWndProc(Window, 0x401E, (int)(W), -1);
+					W[strlen(V)] = 0;/// на всякий случай припишем 0
+					conCursorPosition = strlen(V); // Помещаем в конец курсорчик
+					lenStrOld = strlen(V);
+					lua_settop(L, Top);*/
+				break;
 
-					lua_pushstring(L,string);
-					lua_rawseti(L,-2,lastI-1);
+				case noxKeyboardKeys::KBD_DOWN:
+					conPrintI("History scroll down");
+					/*int Top = lua_gettop(L); // запоминаем что в начале
+					lua_getglobal(L, "conStr");
+					if (lua_type(L, -1) != LUA_TTABLE) // если там нил например
+					{
+						lua_settop(L, Top);
+						return 1;
+					}
+					lua_getfield(L, -1, "lastItem");
+					int lastI = lua_tointeger(L, -1); // для удобства
+					lua_getfield(L, -2, "lastStr");
+					int lastS = lua_tointeger(L, -1);
+					lastS++;
+					if (lastS > 50 || lastS > luaL_getn(L, -3)) lastS = 1;
+					if (lastS != lastI)
+					{
+						//lastS(старый) lastI [таблица]
+						lua_pushinteger(L, lastS);
+						lua_setfield(L, -4, "lastStr");
+					}
+					lua_rawgeti(L, -3, lastS);
+					if (lua_type(L, -1) != LUA_TSTRING) // если там не строка а нил например
+					{
+						lua_settop(L, Top);
+						return 1;
+					}
+					const char* V = lua_tostring(L, -1);
+					lua_pop(L, 3);
+					wchar_t* W = (wchar_t*)P;
+					mbstowcs(W, V, 300);
+					noxCallWndProc(Window, 0x401E, (int)(W), -1);
+					W[strlen(V)] = 0;// на всякий случай припишем 0
+					conCursorPosition = strlen(V); // курсор в конец
+					lenStrOld = strlen(V);
+					lua_settop(L, Top);*/
+				break;
 
-					lua_pushinteger(L,lastI);
-					lua_setfield(L,-2,"lastStr");
+				//Execute command
+				case noxKeyboardKeys::KBD_ENTER:
+				case noxKeyboardKeys::KBD_KP_ENTER:
+					conPrintI("History is not available yet.");
+					conCursorPosition = 0; // курсор в начало
+					lenStrOld = 0;
+					consoleProcFn();// Вызываем обработку
+				break;
+				default:
+					skipNoxProcessing = false;
+			}
+			/*Remove this block after testing!
+			std::string debug_modifiers;
+
+			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_SHIFT)
+				debug_modifiers += "[SHIFT]";
+			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
+				debug_modifiers += "[CTRL]";
+			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_ALT)
+				debug_modifiers += "[ALT]";
+			if (HIWORD(GetKeyState(VK_SHIFT)))
+				debug_modifiers += "[SHIFT]";
+			if (HIWORD(GetKeyState(VK_CONTROL)))
+				debug_modifiers += "[CTRL]";
+			if (HIWORD(GetKeyState(VK_MENU)))
+				debug_modifiers += "[ALT]";
+			conPrintI(debug_modifiers.c_str());
+			//debug. how long is the command
+			//conPrintI(std::to_string(console_cmd.length()).c_str());*/
+				
+			if (skipNoxProcessing)
+				return 1; //Prevent additional processing by Nox
+				
+			/*if (keyCode==0x1C) // нажали энтер?
+			{
+				int Top=lua_gettop(L); // запоминаеем что в начале
+				char string[300]="";
+				wchar_t *W=(wchar_t*)P;
+				int Len=wcslen(W);
+				wcstombs(string,W,Len);
+				lua_getglobal(L,"conStr");
+				if (lua_type(L,-1)!=LUA_TTABLE)
+				{
+					lua_newtable(L);
+					lua_pushvalue(L,-1);
+					lua_setglobal(L,"conStr");
+				}
+				if (Len==0) 
+				{
 					lua_settop(L,Top);
-					conCursorPosition=0; // курсор в начало
-					lenStrOld=0;
 					consoleProcFn();// Вызываем обработку
 					return 1;
-				}*/
-				consoleEditProc(Window,Msg,keyCode,keyState);
-				console_cmd=(const wchar_t*)P;
-				if (lenStrOld<console_cmd.size()) // код для кнопачек
-				{
-					lenStrOld++;
-					console_cmd.insert(conCursorPosition,1,console_cmd.at(lenStrOld-1));
-					console_cmd.erase(lenStrOld);
-					conCursorPosition++;
-					noxCallWndProc(Window,0x401E,(int)console_cmd.c_str(),-1);
 				}
+				lua_getfield(L,-1,"lastItem"); // достаем последний элемент 
+				int lastI=lua_tointeger(L,-1)+1;
+				if (lastI>50)
+					lastI=1;
+				lua_pop(L,1);
+				lua_pushinteger(L,lastI);
+				lua_setfield(L,-2,"lastItem"); 
+
+				lua_pushstring(L,string);
+				lua_rawseti(L,-2,lastI-1);
+
+				lua_pushinteger(L,lastI);
+				lua_setfield(L,-2,"lastStr");
+				lua_settop(L,Top);
+				conCursorPosition=0; // курсор в начало
+				lenStrOld=0;
+				consoleProcFn();// Вызываем обработку
 				return 1;
-			}
-			else
+			}*/
+			consoleEditProc(Window,Msg,keyCode,keyState);
+			console_cmd=(const wchar_t*)P;
+			if (lenStrOld<console_cmd.size()) // код для кнопачек
 			{
-				conPrintI((std::string("ERROR: Unknown keyboard event ") + std::to_string(keyState)).c_str());
+				lenStrOld++;
+				console_cmd.insert(conCursorPosition,1,console_cmd.at(lenStrOld-1));
+				console_cmd.erase(lenStrOld);
+				conCursorPosition++;
+				noxCallWndProc(Window,0x401E,(int)console_cmd.c_str(),-1);
 			}
+			return 1;
 		}
-		return consoleEditProc(Window,Msg,keyCode,keyState);
+		else
+		{
+			conPrintI((std::string("ERROR: Unknown keyboard event ") + std::to_string(keyState)).c_str());
+		}		
 	}
 
 	int __cdecl conGetWidthForCur(BYTE *Window,BYTE *Wdd)
