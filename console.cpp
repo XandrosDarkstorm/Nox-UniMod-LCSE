@@ -76,7 +76,67 @@ namespace
 	const size_t MAX_CONSOLE_COMMAND_LENGTH = 127;
 	int conCursorPosition = 0;
 	int lenStrOld = 0;
-	unsigned char conKeyboardModifiers = 0; //3 bits: SHIFT, CTRL, ALT
+	unsigned char conKeyboardModifiers = 0; //3 bits: SHIFT, CTRL, ALT. Meta key is not implemented intentionally.
+
+	/// <summary>
+	/// Find the beginning of the word
+	/// </summary>
+	/// <param name="SourceStr">Original string</param>
+	/// <param name="CursorPosition">Console cursor position</param>
+	/// <param name="LookToLeft">If true -- look to the left from cursor position; otherwise -- to the right</param>
+	/// <returns>Returns position for the console cursor.</returns>
+	size_t findWordCloseToCursor(std::wstring& SourceStr, size_t CursorPosition, bool LookToLeft)
+	{
+		int pos = CursorPosition;
+		if (LookToLeft)
+		{
+			//Just to be extra safe -- if we are at the start, then no need in processing.
+			if (CursorPosition < 2)
+				return 0;
+
+			// If character to the left is a space -- skip spaces, until find first non-space
+			if (SourceStr[--pos] == L' ')
+			{
+				for (; pos > -1; --pos)
+				{
+					if (SourceStr[pos] != L' ')
+						break;
+				}
+			}
+
+			// Look to the first space character. The next character will be the result.
+			for (; pos > -1; --pos)
+			{
+				if (SourceStr[pos] == L' ')
+					break;
+			}
+			return pos + 1;
+		}
+		else
+		{
+			//Just to be extra safe -- if we are at the end, then no need in processing.
+			if (CursorPosition == SourceStr.length())
+				return CursorPosition;
+
+			// If character to the right is not a space -- skip characters, until find first space character.
+			if (SourceStr[++pos] != L' ')
+			{
+				for (; pos < SourceStr.length(); ++pos)
+				{
+					if (SourceStr[pos] == L' ')
+						break;
+				}
+			}
+
+			// Look to the first non-space character -- it will be the result
+			for (; pos < SourceStr.length(); ++pos)
+			{
+				if (SourceStr[pos] != L' ')
+					break;
+			}
+			return pos;
+		}
+	}
 
 	int (__cdecl *consoleEditProc)(void* Window,int Msg,int A,int B);
 	void (__cdecl *consoleProcFn)();
@@ -175,11 +235,22 @@ namespace
 					//Cursor movement
 					case noxKeyboardKeys::KBD_LEFT:
 						if (conCursorPosition > 0)
-							conCursorPosition--;
+						{
+							if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
+								conCursorPosition = findWordCloseToCursor(console_cmd, conCursorPosition, true);
+							else
+								conCursorPosition--;
+						}
 					break;
+					
 					case noxKeyboardKeys::KBD_RIGHT:
 						if (conCursorPosition < cmd_length)
-							conCursorPosition++;
+						{
+							if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
+								conCursorPosition = findWordCloseToCursor(console_cmd, conCursorPosition, false);
+							else
+								conCursorPosition++;
+						}
 					break;
 
 					case noxKeyboardKeys::KBD_HOME:
@@ -223,10 +294,7 @@ namespace
 								break; //Do not worry about pasting - there is no space for it anyway.
 
 							if (!IsClipboardFormatAvailable(CF_TEXT))
-							{
-								conPrintI("No supported text to paste!");
 								break;
-							}
 								
 							BOOL is_clipbrd_opened = OpenClipboard(NULL);
 							if (is_clipbrd_opened)
@@ -239,15 +307,12 @@ namespace
 									if (clipboard_text)
 									{
 										/*
-										* Sanitize the clipboard.
-										* CRLF characters are not allowed (only 1 line of text is supported).
-										* Filter out tabs and other control characters.
+										* Sanitize the clipboard:
+										* Only 1 line of text is allowed.
+										* Control characters are not allowed.
 										*/
-										//conPrintI(std::to_string(strlen(clipboard_text)).c_str());
-										//conPrintI("==CHARS==");
 										for (; clipboard_text_length < strlen(clipboard_text) && clipboard_text_length + cmd_length < MAX_CONSOLE_COMMAND_LENGTH; ++clipboard_text_length)
 										{
-											//conPrintI(std::to_string(clipboard_text[clipboard_text_length]).c_str());
 											if (clipboard_text[clipboard_text_length] == 0)
 												break;
 											if (clipboard_text[clipboard_text_length] < 32)
@@ -367,8 +432,8 @@ namespace
 					default:
 						skipNoxProcessing = false;
 				}
-				//Remove after testing!
-				/*std::string debug_modifiers;
+				/*Remove this block after testing!
+				std::string debug_modifiers;
 
 				if (conKeyboardModifiers & keyboardModifiers::KBDMOD_SHIFT)
 					debug_modifiers += "[SHIFT]";
@@ -382,9 +447,9 @@ namespace
 					debug_modifiers += "[CTRL]";
 				if (HIWORD(GetKeyState(VK_MENU)))
 					debug_modifiers += "[ALT]";
-				conPrintI(debug_modifiers.c_str());*/
+				conPrintI(debug_modifiers.c_str());
 				//debug. how long is the command
-				conPrintI(std::to_string(console_cmd.length()).c_str());
+				//conPrintI(std::to_string(console_cmd.length()).c_str());*/
 				
 				if (skipNoxProcessing)
 					return 1; //Prevent additional processing by Nox
