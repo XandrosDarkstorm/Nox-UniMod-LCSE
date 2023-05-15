@@ -223,6 +223,9 @@
     <ClInclude Include="input_info.h">
       <Filter>Source Files\client</Filter>
     </ClInclude>
+    <ClInclude Include="apitools_windows.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Library Include="Libs\libpng.lib">

@@ -221,6 +221,7 @@
     <ClCompile Include="windowsUniModFunction.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="apitools_windows.h" />
     <ClInclude Include="buildParameters.h" />
     <ClInclude Include="input_info.h" />
     <ClInclude Include="Libs\lpeg.h" />

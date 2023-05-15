@@ -2,6 +2,7 @@
 #include <string>
 #include "string"
 #include "input_info.h"
+#include "apitools_windows.h"
 
 struct packetChat
 {
@@ -168,16 +169,18 @@ namespace
 
 		//Keyboard input processing
 		P=*((BYTE**)(P+0x20));//Capture string data
+		
 		/*
-		X.D> I do not know the codes for all keyboard buttons.
-		If somebody wants to help -- please, assign debug_kbd to something in the game and send KEYCODE RAW values
-		and their associated buttons to "Issues" of the Nox LCSE repository.
+		* Numpad fixes.
+		* Nox does not care about NumLock status and process buttons as numbers.
+		* The code below fixes that by converting keyCode to the proper button.
 		*/
-		lua_getglobal(L, "debug_kbd");
-		if (lua_type(L, -1) != LUA_TNIL)
+		if (!osNumLockStatus())
 		{
-			conPrintI((std::string("KEYCODE RAW: ") + std::to_string(keyCode)).c_str());
+			//NumLock is not active -- convert keys into correct representation.
+			keyCode = keyboardConvertNumlockNumbers(keyCode);
 		}
+
 		if (keyState == noxKeyboardEvents::KEY_RELEASE)
 		{
 			switch (keyCode)
@@ -197,7 +200,7 @@ namespace
 					conKeyboardModifiers &= !keyboardModifiers::KBDMOD_ALT;
 				break;
 			}
-				
+			return consoleEditProc(Window, Msg, keyCode, keyState);
 		}
 		else if (keyState == noxKeyboardEvents::KEY_PRESS)
 		{
@@ -205,18 +208,31 @@ namespace
 			bool skipNoxProcessing = true;
 
 			/*
+			X.D> I do not know the codes for all keyboard buttons.
+			If somebody wants to help -- please, assign debug_kbd to something in the game and send KEYCODE RAW values
+			and their associated buttons to "Issues" of the Nox LCSE repository.
+			*/
+			int top = lua_gettop(L);
+			getServerVar("debug_kbd");
+			if (!lua_isnil(L, -1))
+			{
+				conPrintI((std::string("KEYCODE RAW: ") + std::to_string(keyCode)).c_str());
+			}
+			lua_settop(L, top);
+
+			/*
 			* Double check the key modifiers.
 			* This is required to fix situation when key modifiers get stuck in
 			* the pressed position during window switch (Nox quirk).
 			* GetKeyState is not reliable by itself (sometimes it lags a bit, comparing to capture from Nox directly)
 			*/
-			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_SHIFT && !HIWORD(GetKeyState(VK_SHIFT)))
+			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_SHIFT && !osIsKeyPressed(VK_SHIFT))
 				conKeyboardModifiers &= !keyboardModifiers::KBDMOD_SHIFT;
-			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL && !HIWORD(GetKeyState(VK_CONTROL)))
+			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL && !osIsKeyPressed(VK_CONTROL))
 				conKeyboardModifiers &= !keyboardModifiers::KBDMOD_CTRL;
-			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_ALT && !HIWORD(GetKeyState(VK_MENU)))
+			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_ALT && !osIsKeyPressed(VK_MENU))
 				conKeyboardModifiers &= !keyboardModifiers::KBDMOD_ALT;
-
+			
 			//Process the key
 			switch (keyCode)
 			{

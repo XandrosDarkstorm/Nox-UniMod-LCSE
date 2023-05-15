@@ -57,7 +57,7 @@ enum noxKeyboardKeys : unsigned char
 	KBD_N = 49,
 	KBD_M = 50,
 	KBD_COMMA = 51,
-	KBD_DOT = 52,
+	KBD_PERIOD = 52,
 	KBD_SLASH = 53,
 	KBD_SHIFT_RIGHT = 54,
 	KBD_KP_MULTIPLY = 55,
@@ -88,7 +88,7 @@ enum noxKeyboardKeys : unsigned char
 	KBD_KP_2 = 80,
 	KBD_KP_3 = 81,
 	KBD_KP_0 = 82,
-	KBD_KP_DEL = 83,
+	KBD_KP_PERIOD = 83,
 	KBD_F11 = 87,
 	KBD_F12 = 88,
 
@@ -158,3 +158,26 @@ enum keyboardModifiers : unsigned char
 	KBDMOD_CTRL = 2,
 	KBDMOD_ALT = 4
 };
+
+/// <summary>
+/// Converts numbers from keypad to associated commands (when Numlock is off)
+/// </summary>
+/// <param name="keyCode">Original key code</param>
+/// <returns>Translated key code</returns>
+unsigned char keyboardConvertNumlockNumbers(unsigned char keyCode)
+{
+	if (keyCode == noxKeyboardKeys::KBD_KP_7) return noxKeyboardKeys::KBD_HOME;
+	if (keyCode == noxKeyboardKeys::KBD_KP_8) return noxKeyboardKeys::KBD_UP;
+	if (keyCode == noxKeyboardKeys::KBD_KP_9) return noxKeyboardKeys::KBD_PAGEUP;
+	
+	if (keyCode == noxKeyboardKeys::KBD_KP_4) return noxKeyboardKeys::KBD_LEFT;
+	if (keyCode == noxKeyboardKeys::KBD_KP_6) return noxKeyboardKeys::KBD_RIGHT;
+	
+	if (keyCode == noxKeyboardKeys::KBD_KP_1) return noxKeyboardKeys::KBD_END;
+	if (keyCode == noxKeyboardKeys::KBD_KP_2) return noxKeyboardKeys::KBD_DOWN;
+	if (keyCode == noxKeyboardKeys::KBD_KP_3) return noxKeyboardKeys::KBD_PAGEDOWN;
+	
+	if (keyCode == noxKeyboardKeys::KBD_KP_0) return noxKeyboardKeys::KBD_INSERT;
+	if (keyCode == noxKeyboardKeys::KBD_KP_PERIOD) return noxKeyboardKeys::KBD_DELETE;
+	return keyCode; //If nothing recognized
+}
