@@ -422,8 +422,6 @@ DWORD *frameCounter=(DWORD*)0x0084EA04;
 DWORD *idGold=(DWORD*)0x00750714;
 
 #include <vector>
-#include "authManager.cpp"
-#include "noxManifest.cpp"
 int *scriptStackSize=(int *)0x0075AE40;
 std::vector<void *> scriptValues;
 
@@ -1188,6 +1186,8 @@ extern bool initAuthData();
 extern void polygonInit();
 extern void bugsInit();
 extern void autoServer();
+extern void authInit(lua_State* L);
+extern void initManifest();
 extern "C" void scoreInit(lua_State *L);
 
 extern "C" void initAudServer(lua_State *L);
@@ -1203,7 +1203,6 @@ extern void initFilesystem();
 extern "C" void adminInit(lua_State *L);
 extern "C" int luaopen_lpeg (lua_State *L);
 extern "C" void mapUtilInit(lua_State*L);
-extern "C" void initManifest(lua_State * L);
 extern bool serverUpdate();
 
 int initWindowedMode(int param1, int param2, int param3)
