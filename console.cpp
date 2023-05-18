@@ -77,28 +77,21 @@ namespace
 
 	//Console input related variables
 
-	
+
 	const size_t MAX_CONSOLE_COMMAND_LENGTH = 127;
 	int conCursorPosition = 0; //Visual placement of the cursor
-	int lenStrOld = 0;
 	unsigned char conKeyboardModifiers = 0; //3 bits: SHIFT, CTRL, ALT. Meta key is not implemented intentionally.
-	/// <summary>
-	/// When user issues the "sysop" command, this variable is set to true.
-	/// </summary>
-	bool conSysopPasswordModeActive = false;
 #ifdef CONSOLE_COMMAND_HISTORY
 	/// <summary>
 	/// When history commands being recalled, current console input is stored here, so user can revert back to it, if they change their mind.
 	/// </summary>
 	std::wstring conCurrentInput = L"";
-	/// <summary>
-	/// Is user is looking through the commands history?
-	/// </summary>
-	bool isShowingCommandHistory = false;
+	bool isShowingCommandHistory = false;  // Is user is looking through the commands history?
 	/// <summary>
 	/// Current pointer to the command in the commands history
 	/// </summary>
 	std::list<std::wstring>::const_iterator conCurrentHistoryRecord = CommandHistory::getEndOfList();
+	bool conSysopPasswordModeActive = false; // When user issues the "sysop" command, this variable is set to true.
 #endif
 	//End of console input related variables
 
@@ -172,9 +165,18 @@ namespace
 		SourceStr.erase(SourceStr.find_last_not_of(L" ") + 1);
 	}
 
-	void toLowercase(std::wstring& SourceStr)
+	/// <summary>
+	/// Return the source string converted to lowercase.
+	/// </summary>
+	/// <param name="SourceStr">Source string</param>
+	std::wstring toLowercase(std::wstring& SourceStr)
 	{
-		//SourceStr = std::towlower(SourceStr.c_str());
+		std::wstring result;
+		for (int i = 0; i < SourceStr.length(); ++i)
+		{
+			result.push_back(std::towlower(SourceStr[i]));
+		}
+		return result;
 	}
 
 	/// <summary>
@@ -338,7 +340,6 @@ namespace
 							cut_size = findWordCloseToCursor(console_cmd, conCursorPosition, false) - conCursorPosition;
 						console_cmd.erase(conCursorPosition, cut_size);
 						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
-						lenStrOld -= cut_size;
 #ifdef CONSOLE_COMMAND_HISTORY
 						//If user change the input -- we no longer work with history
 						conCurrentHistoryRecord = CommandHistory::getEndOfList();
@@ -356,7 +357,6 @@ namespace
 						console_cmd.erase(conCursorPosition - cut_size, cut_size);
 						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
 						conCursorPosition -= cut_size;
-						lenStrOld -= cut_size;
 #ifdef CONSOLE_COMMAND_HISTORY
 						//If user change the input -- we no longer work with history
 						conCurrentHistoryRecord = CommandHistory::getEndOfList();
@@ -408,7 +408,6 @@ namespace
 										console_cmd.insert(conCursorPosition, clipboardTextWide);
 										noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
 										conCursorPosition += clipboard_text_length;
-										lenStrOld += clipboard_text_length;
 									}										
 								}
 								GlobalUnlock(clipboard_obj);
@@ -431,7 +430,6 @@ namespace
 						console_cmd = L"";
 						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
 						conCursorPosition = 0;
-						lenStrOld = 0;
 #ifdef CONSOLE_COMMAND_HISTORY
 						//If user change the input -- we no longer work with history
 						conCurrentHistoryRecord = CommandHistory::getEndOfList();
@@ -461,7 +459,7 @@ namespace
 					//Change the command in the command input textbox.
 					console_cmd = *(--conCurrentHistoryRecord);
 					noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
-					lenStrOld = conCursorPosition = console_cmd.length();
+					conCursorPosition = console_cmd.length();
 #endif
 				break;
 
@@ -472,43 +470,43 @@ namespace
 					{
 						//Restore user's input, if user reached the EOL mark.
 						if (++conCurrentHistoryRecord == CommandHistory::getEndOfList())
-						{
 							console_cmd = conCurrentInput;
-						}
 						else
-						{
 							console_cmd = *conCurrentHistoryRecord;
-						}
+
 						//Change the command in the command input textbox.
 						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
-						lenStrOld = conCursorPosition = console_cmd.length();
+						conCursorPosition = console_cmd.length();
 					}
 #endif
 				break;
 				//Execute command
 				case noxKeyboardKeys::KBD_ENTER:
 				case noxKeyboardKeys::KBD_KP_ENTER:
-					//Strip spaces from the sent command. Nox does that in its code, so we have to conform.
+					//Strip spaces from the sent command. Nox does that in its code, so there is no reason not to conform.
 					stripWhitespaces(console_cmd);
+					noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
+
 #ifdef CONSOLE_COMMAND_HISTORY
+					//Record command to the history buffer
 					if (console_cmd.length() > 0 && !conSysopPasswordModeActive)
 					{
 						CommandHistory::appendToHistoryBuffer(console_cmd);
 					}
 					conCurrentHistoryRecord = CommandHistory::getEndOfList();
-#endif
+
 					//Process sysop input flag
 					if (!conSysopPasswordModeActive)
 					{
-						if (console_cmd == L"sysop")
+						//TODO: X.D> Convert command to lowercase
+						if (toLowercase(console_cmd) == L"sysop")
 							conSysopPasswordModeActive = true;
 					}
 					else
 						conSysopPasswordModeActive = false;
-
+#endif
 					//Reset the cursor position and send command to the game
 					conCursorPosition = 0;
-					lenStrOld = 0;
 					consoleProcFn();
 				break;
 
@@ -533,7 +531,7 @@ namespace
 					noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
 
 #ifdef CONSOLE_COMMAND_HISTORY
-					//If user change the input -- we no longer work with history
+					//If user changed the input -- we no longer work with history
 					conCurrentHistoryRecord = CommandHistory::getEndOfList();
 #endif
 				}
