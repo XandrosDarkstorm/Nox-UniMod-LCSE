@@ -228,8 +228,26 @@ void __cdecl initModLib2()
 }
 
 extern "C" int conDoCmd(char *Cmd,bool &PrintNil);
+
+/// <summary>
+/// Lua processor.
+/// </summary>
+/// <param name="Cmd"></param>
+/// <param name="PrintNil"></param>
+/// <returns></returns>
 int conDoCmd(char *Cmd,bool &PrintNil)
 {
+	//TODO: X.D> This function requires major modifications -- see commentary below this todo.
+	/*
+	* This function is responsible for providing both client-side and server-side functions.
+	* It is important to change the behavior of this function to follow these rules:
+	* 1. NO CLIENT-SIDE LUA CODE! AT ALL. Clients should not have any kind of Lua control.
+	*	This must be reserved for server only.
+	* 2. There must be the way to implement client-side commands, which are processed on C++ side.
+	*	For example, user must be able to call "version" function and receive mod version.
+	* 3. This function must never crash Nox, if there is a problem with quotation marks.
+	*	This problem is not confirmed on Kir's version, but i remember this problem being a thing.
+	*/
 	int gf = ~*GameFlags & 1;
 	int top = lua_gettop(L);
 	const char* mode;
@@ -357,7 +375,7 @@ int conDoCmd(char *Cmd,bool &PrintNil)
 					int newTop = lua_gettop(L);
 					const char* errorStr = lua_tolstring(L, newTop, 0);
 					char Dest[200];
-					strcpy(Dest, "error: ");
+					strcpy(Dest, "lua error: ");
 					strncat(&Dest[strlen(Dest)], errorStr, (199-strlen(Dest)));
 					conPrintI(Dest);
 				}
@@ -370,6 +388,12 @@ int conDoCmd(char *Cmd,bool &PrintNil)
 
 void onComCmd2();
 
+/// <summary>
+/// This function is called when console command execution is requested.
+/// </summary>
+/// <param name="A">The input console command</param>
+/// <param name="B"></param>
+/// <returns></returns>
 DWORD __cdecl onConCmd(wchar_t *A,DWORD B) // TODO: TO REIMPLEMENT FROM ASM!!!
 {
 	int cmdResult = 0;

@@ -35,6 +35,9 @@
     <Filter Include="Source Files\server\unit">
       <UniqueIdentifier>{ec9b412c-14f4-466e-8278-753ed28aeb8e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\client\Modules">
+      <UniqueIdentifier>{4a186d51-eacb-4c98-9d7d-13dabb70871d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="admin.cpp">
@@ -136,9 +139,6 @@
     <ClCompile Include="keys.cpp">
       <Filter>Source Files\client</Filter>
     </ClCompile>
-    <ClCompile Include="replays.cpp">
-      <Filter>Source Files\client</Filter>
-    </ClCompile>
     <ClCompile Include="spellGet.cpp">
       <Filter>Source Files\client</Filter>
     </ClCompile>
@@ -193,6 +193,12 @@
     <ClCompile Include="noxManifest.cpp">
       <Filter>Source Files\client</Filter>
     </ClCompile>
+    <ClCompile Include="commandHistory.cpp">
+      <Filter>Source Files\client\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="modConfiguration.cpp">
+      <Filter>Source Files\client\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Libs\lpeg.h">
@@ -225,6 +231,12 @@
     </ClInclude>
     <ClInclude Include="apitools_windows.h">
       <Filter>Source Files\client</Filter>
+    </ClInclude>
+    <ClInclude Include="commandHistory.h">
+      <Filter>Source Files\client\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="modConfiguration.h">
+      <Filter>Source Files\client\Modules</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

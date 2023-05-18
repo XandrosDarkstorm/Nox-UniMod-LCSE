@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include <string>
-#include "string"
 #include "input_info.h"
 #include "apitools_windows.h"
+#include "commandHistory.h"
+#include <cwctype>
 
 struct packetChat
 {
@@ -74,10 +75,32 @@ namespace
 		};
 	}
 
+	//Console input related variables
+
+	
 	const size_t MAX_CONSOLE_COMMAND_LENGTH = 127;
-	int conCursorPosition = 0;
+	int conCursorPosition = 0; //Visual placement of the cursor
 	int lenStrOld = 0;
 	unsigned char conKeyboardModifiers = 0; //3 bits: SHIFT, CTRL, ALT. Meta key is not implemented intentionally.
+	/// <summary>
+	/// When user issues the "sysop" command, this variable is set to true.
+	/// </summary>
+	bool conSysopPasswordModeActive = false;
+#ifdef CONSOLE_COMMAND_HISTORY
+	/// <summary>
+	/// When history commands being recalled, current console input is stored here, so user can revert back to it, if they change their mind.
+	/// </summary>
+	std::wstring conCurrentInput = L"";
+	/// <summary>
+	/// Is user is looking through the commands history?
+	/// </summary>
+	bool isShowingCommandHistory = false;
+	/// <summary>
+	/// Current pointer to the command in the commands history
+	/// </summary>
+	std::list<std::wstring>::const_iterator conCurrentHistoryRecord = CommandHistory::getEndOfList();
+#endif
+	//End of console input related variables
 
 	/// <summary>
 	/// Find the beginning of the word
@@ -139,18 +162,38 @@ namespace
 		}
 	}
 
+	/// <summary>
+	/// Strips spaces both from left and right side in a given wstring.
+	/// </summary>
+	/// <param name="SourceStr">A string to perform operation on</param>
+	void stripWhitespaces(std::wstring& SourceStr)
+	{
+		SourceStr.erase(0, SourceStr.find_first_not_of(L" "));
+		SourceStr.erase(SourceStr.find_last_not_of(L" ") + 1);
+	}
+
+	void toLowercase(std::wstring& SourceStr)
+	{
+		//SourceStr = std::towlower(SourceStr.c_str());
+	}
+
+	/// <summary>
+	/// Signal the game to process the event for the console command as is.
+	/// </summary>
 	int (__cdecl *consoleEditProc)(void* Window,int Msg,int A,int B);
+	/// <summary>
+	/// Signal the game to process the console command.
+	/// </summary>
 	void (__cdecl *consoleProcFn)();
 	/// <summary>
 	/// This function controlls the cursor and the text input of the console.
 	/// </summary>
-	/// <param name="Window"></param>
+	/// <param name="Window">A window structure.</param>
 	/// <param name="Msg">Message console textbox receives. 0x11 - MouseEnter 0x12 - MouseLeave, 0x15 - keyboard input</param>
 	/// <param name="keyCode">Keycode in a strange form</param>
 	/// <param name="keyState">Key status. 2 - pressed, 1 - released</param>
 	int __cdecl consoleEditProcNew(void* Window,int Msg,int keyCode,int keyState)
 	{
-		BYTE *P=(BYTE*)Window;
 		//TODO: X.D> the comment below is garbage. Consult KirConjurer if this is recorded somewhere.
 		//conPrintI((std::string("MSG: ") + std::to_string(Msg)).c_str());
 		//conPrintI((std::string("A: ") + std::to_string(keyCode)).c_str());
@@ -167,8 +210,9 @@ namespace
 		if (Msg != noxWindowEvents::KEYBOARD_INPUT)
 			return consoleEditProc(Window, Msg, keyCode, keyState);
 
-		//Keyboard input processing
-		P=*((BYTE**)(P+0x20));//Capture string data
+		//Keyboard input processing. 0x20 -- input string address
+		BYTE* nox_console_input = (BYTE*) Window;
+		nox_console_input = *((BYTE**)(nox_console_input + 0x20));
 		
 		/*
 		* Numpad fixes.
@@ -204,8 +248,8 @@ namespace
 		}
 		else if (keyState == noxKeyboardEvents::KEY_PRESS)
 		{
-			std::wstring console_cmd((const wchar_t*) P);
-			bool skipNoxProcessing = true;
+			std::wstring console_cmd((const wchar_t*) nox_console_input);
+			bool passInputToNoxEngine = false; //Should Nox process the input?
 
 			/*
 			X.D> I do not know the codes for all keyboard buttons.
@@ -233,26 +277,26 @@ namespace
 			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_ALT && !osIsKeyPressed(VK_MENU))
 				conKeyboardModifiers &= !keyboardModifiers::KBDMOD_ALT;
 			
-			//Process the key
+			//Process the key.
 			switch (keyCode)
 			{
 				//Key modifiers. We don't replace the behavior - we only need to track modifiers.
 				case noxKeyboardKeys::KBD_SHIFT_LEFT:
 				case noxKeyboardKeys::KBD_SHIFT_RIGHT:
 					conKeyboardModifiers |= keyboardModifiers::KBDMOD_SHIFT;
-					skipNoxProcessing = false;
+					passInputToNoxEngine = true;
 				break;
 
 				case noxKeyboardKeys::KBD_CTRL_LEFT:
 				case noxKeyboardKeys::KBD_CTRL_RIGHT:
 					conKeyboardModifiers |= keyboardModifiers::KBDMOD_CTRL;
-					skipNoxProcessing = false;
+					passInputToNoxEngine = true;
 				break;
 
 				case noxKeyboardKeys::KBD_ALT_LEFT:
 				case noxKeyboardKeys::KBD_ALT_RIGHT:
 					conKeyboardModifiers |= keyboardModifiers::KBDMOD_ALT;
-					skipNoxProcessing = false;
+					passInputToNoxEngine = true;
 				break;
 
 				//Cursor movement
@@ -295,6 +339,10 @@ namespace
 						console_cmd.erase(conCursorPosition, cut_size);
 						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
 						lenStrOld -= cut_size;
+#ifdef CONSOLE_COMMAND_HISTORY
+						//If user change the input -- we no longer work with history
+						conCurrentHistoryRecord = CommandHistory::getEndOfList();
+#endif
 					}						
 				break;
 
@@ -309,6 +357,10 @@ namespace
 						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
 						conCursorPosition -= cut_size;
 						lenStrOld -= cut_size;
+#ifdef CONSOLE_COMMAND_HISTORY
+						//If user change the input -- we no longer work with history
+						conCurrentHistoryRecord = CommandHistory::getEndOfList();
+#endif
 					}						
 				break;
 
@@ -350,7 +402,6 @@ namespace
 
 									if (clipboard_text_length > 0)
 									{
-
 										wchar_t *clipboardTextWide = new wchar_t[clipboard_text_length + 1];
 										mbstowcs(clipboardTextWide, clipboard_text, clipboard_text_length);
 										clipboardTextWide[clipboard_text_length] = 0;
@@ -370,7 +421,7 @@ namespace
 						}
 					}
 					else
-						skipNoxProcessing = false;
+						passInputToNoxEngine = true;
 				break;
 
 				case noxKeyboardKeys::KBD_ESC:
@@ -381,175 +432,118 @@ namespace
 						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
 						conCursorPosition = 0;
 						lenStrOld = 0;
+#ifdef CONSOLE_COMMAND_HISTORY
+						//If user change the input -- we no longer work with history
+						conCurrentHistoryRecord = CommandHistory::getEndOfList();
+#endif
 					}
 					else //If console input textbox is clean -- close the console (which is default Nox behavior)
-						skipNoxProcessing = false;
+						passInputToNoxEngine = true;
 				break;
 
-				//Command history
 				case noxKeyboardKeys::KBD_UP:
-					conPrintI("History scroll UP");
-					/*int Top = lua_gettop(L); // запоминаем что в начале
-					lua_getglobal(L, "conStr");
-					if (lua_type(L, -1) != LUA_TTABLE) // если там нил например
+#ifdef CONSOLE_COMMAND_HISTORY
+					if (conCurrentHistoryRecord == CommandHistory::getFirstRecord())
 					{
-						lua_settop(L, Top);
-						return 1;
+						/*
+						* Notify that we have no more history records.
+						* The idea is to not wrap around history. The reason for that is because we store
+						* user's input before starting history recall.
+						*/
+						conPrintI("No more commands stored.");
+						break;
 					}
-					lua_getfield(L, -1, "lastItem");
-					int lastI = lua_tointeger(L, -1); // дл€ удобства
-					lua_getfield(L, -2, "lastStr");
-					int lastS = lua_tointeger(L, -1);
-					lastS--;
-					if (lastS < 1) lastS = luaL_getn(L, -3);
-					if (lastS != lastI)
-					{
-						//lastS(старый) lastI [таблица]
-						lua_pushinteger(L, lastS);
-						lua_setfield(L, -4, "lastStr");
-					}
-					lua_rawgeti(L, -3, lastS);
-					if (lua_type(L, -1) != LUA_TSTRING) // если там не строка а нил например
-					{
-						lua_settop(L, Top);
-						return 1;
-					}
-					const char* V = lua_tostring(L, -1);
-					lua_pop(L, 3);
-					wchar_t* W = (wchar_t*)P;
-					mbstowcs(W, V, 300);
-					noxCallWndProc(Window, 0x401E, (int)(W), -1);
-					W[strlen(V)] = 0;/// на вс€кий случай припишем 0
-					conCursorPosition = strlen(V); // ѕомещаем в конец курсорчик
-					lenStrOld = strlen(V);
-					lua_settop(L, Top);*/
+					
+					//Store current console input so we can go back to it later.
+					if (conCurrentHistoryRecord == CommandHistory::getEndOfList())
+						conCurrentInput = console_cmd;
+					
+					//Change the command in the command input textbox.
+					console_cmd = *(--conCurrentHistoryRecord);
+					noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
+					lenStrOld = conCursorPosition = console_cmd.length();
+#endif
 				break;
 
 				case noxKeyboardKeys::KBD_DOWN:
-					conPrintI("History scroll down");
-					/*int Top = lua_gettop(L); // запоминаем что в начале
-					lua_getglobal(L, "conStr");
-					if (lua_type(L, -1) != LUA_TTABLE) // если там нил например
+#ifdef CONSOLE_COMMAND_HISTORY
+					//We can only advance if there is a next record
+					if (conCurrentHistoryRecord != CommandHistory::getEndOfList())
 					{
-						lua_settop(L, Top);
-						return 1;
+						//Restore user's input, if user reached the EOL mark.
+						if (++conCurrentHistoryRecord == CommandHistory::getEndOfList())
+						{
+							console_cmd = conCurrentInput;
+						}
+						else
+						{
+							console_cmd = *conCurrentHistoryRecord;
+						}
+						//Change the command in the command input textbox.
+						noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
+						lenStrOld = conCursorPosition = console_cmd.length();
 					}
-					lua_getfield(L, -1, "lastItem");
-					int lastI = lua_tointeger(L, -1); // дл€ удобства
-					lua_getfield(L, -2, "lastStr");
-					int lastS = lua_tointeger(L, -1);
-					lastS++;
-					if (lastS > 50 || lastS > luaL_getn(L, -3)) lastS = 1;
-					if (lastS != lastI)
-					{
-						//lastS(старый) lastI [таблица]
-						lua_pushinteger(L, lastS);
-						lua_setfield(L, -4, "lastStr");
-					}
-					lua_rawgeti(L, -3, lastS);
-					if (lua_type(L, -1) != LUA_TSTRING) // если там не строка а нил например
-					{
-						lua_settop(L, Top);
-						return 1;
-					}
-					const char* V = lua_tostring(L, -1);
-					lua_pop(L, 3);
-					wchar_t* W = (wchar_t*)P;
-					mbstowcs(W, V, 300);
-					noxCallWndProc(Window, 0x401E, (int)(W), -1);
-					W[strlen(V)] = 0;// на вс€кий случай припишем 0
-					conCursorPosition = strlen(V); // курсор в конец
-					lenStrOld = strlen(V);
-					lua_settop(L, Top);*/
+#endif
 				break;
-
 				//Execute command
 				case noxKeyboardKeys::KBD_ENTER:
 				case noxKeyboardKeys::KBD_KP_ENTER:
-					conPrintI("History is not available yet.");
-					conCursorPosition = 0; // курсор в начало
+					//Strip spaces from the sent command. Nox does that in its code, so we have to conform.
+					stripWhitespaces(console_cmd);
+#ifdef CONSOLE_COMMAND_HISTORY
+					if (console_cmd.length() > 0 && !conSysopPasswordModeActive)
+					{
+						CommandHistory::appendToHistoryBuffer(console_cmd);
+					}
+					conCurrentHistoryRecord = CommandHistory::getEndOfList();
+#endif
+					//Process sysop input flag
+					if (!conSysopPasswordModeActive)
+					{
+						if (console_cmd == L"sysop")
+							conSysopPasswordModeActive = true;
+					}
+					else
+						conSysopPasswordModeActive = false;
+
+					//Reset the cursor position and send command to the game
+					conCursorPosition = 0;
 					lenStrOld = 0;
-					consoleProcFn();// ¬ызываем обработку
+					consoleProcFn();
 				break;
+
+				//Let Nox deal with other keys.
 				default:
-					skipNoxProcessing = false;
+					passInputToNoxEngine = true;
 			}
-			/*Remove this block after testing!
-			std::string debug_modifiers;
 
-			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_SHIFT)
-				debug_modifiers += "[SHIFT]";
-			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_CTRL)
-				debug_modifiers += "[CTRL]";
-			if (conKeyboardModifiers & keyboardModifiers::KBDMOD_ALT)
-				debug_modifiers += "[ALT]";
-			if (HIWORD(GetKeyState(VK_SHIFT)))
-				debug_modifiers += "[SHIFT]";
-			if (HIWORD(GetKeyState(VK_CONTROL)))
-				debug_modifiers += "[CTRL]";
-			if (HIWORD(GetKeyState(VK_MENU)))
-				debug_modifiers += "[ALT]";
-			conPrintI(debug_modifiers.c_str());
-			//debug. how long is the command
-			//conPrintI(std::to_string(console_cmd.length()).c_str());*/
-				
-			if (skipNoxProcessing)
-				return 1; //Prevent additional processing by Nox
-				
-			/*if (keyCode==0x1C) // нажали энтер?
+			if (passInputToNoxEngine)
 			{
-				int Top=lua_gettop(L); // запоминаеем что в начале
-				char string[300]="";
-				wchar_t *W=(wchar_t*)P;
-				int Len=wcslen(W);
-				wcstombs(string,W,Len);
-				lua_getglobal(L,"conStr");
-				if (lua_type(L,-1)!=LUA_TTABLE)
+				/*
+				* If we input something -- correctly refresh the Nox console.
+				* Nox can only input at the end of the command. The code below moves the character to the cursor position.
+				*/
+				int oldStrLen = console_cmd.length();
+				consoleEditProc(Window, Msg, keyCode, keyState);
+				console_cmd = (const wchar_t*)nox_console_input; //Take the resulting buffer after Nox processing.
+				if (console_cmd.length() > oldStrLen)
 				{
-					lua_newtable(L);
-					lua_pushvalue(L,-1);
-					lua_setglobal(L,"conStr");
-				}
-				if (Len==0) 
-				{
-					lua_settop(L,Top);
-					consoleProcFn();// ¬ызываем обработку
-					return 1;
-				}
-				lua_getfield(L,-1,"lastItem"); // достаем последний элемент 
-				int lastI=lua_tointeger(L,-1)+1;
-				if (lastI>50)
-					lastI=1;
-				lua_pop(L,1);
-				lua_pushinteger(L,lastI);
-				lua_setfield(L,-2,"lastItem"); 
+					console_cmd.insert(conCursorPosition++, 1, console_cmd.at(console_cmd.length() - 1));
+					console_cmd.erase(oldStrLen + 1);
+					noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
 
-				lua_pushstring(L,string);
-				lua_rawseti(L,-2,lastI-1);
-
-				lua_pushinteger(L,lastI);
-				lua_setfield(L,-2,"lastStr");
-				lua_settop(L,Top);
-				conCursorPosition=0; // курсор в начало
-				lenStrOld=0;
-				consoleProcFn();// ¬ызываем обработку
-				return 1;
-			}*/
-			consoleEditProc(Window,Msg,keyCode,keyState);
-			console_cmd=(const wchar_t*)P;
-			if (lenStrOld<console_cmd.size()) // код дл€ кнопачек
-			{
-				lenStrOld++;
-				console_cmd.insert(conCursorPosition,1,console_cmd.at(lenStrOld-1));
-				console_cmd.erase(lenStrOld);
-				conCursorPosition++;
-				noxCallWndProc(Window,0x401E,(int)console_cmd.c_str(),-1);
+#ifdef CONSOLE_COMMAND_HISTORY
+					//If user change the input -- we no longer work with history
+					conCurrentHistoryRecord = CommandHistory::getEndOfList();
+#endif
+				}
 			}
 			return 1;
 		}
 		else
 		{
-			conPrintI((std::string("ERROR: Unknown keyboard event ") + std::to_string(keyState)).c_str());
+			conPrintI((std::string("WARNING: Unknown keyboard event ") + std::to_string(keyState)).c_str());
+			return consoleEditProc(Window, Msg, keyCode, keyState);
 		}		
 	}
 
@@ -595,15 +589,17 @@ namespace
 			ret
 		};
 	}
+
 	int conExecL(lua_State *L)
 	{
+		//TODO: X.D> We need to fix this function
 		if ((lua_type(L,1)!=LUA_TSTRING) )
 		{
 			lua_pushstring(L,"[conExec,type_arg1] -> argument must be a string.");
 			lua_error_(L);
 		}
-		wchar_t Buf[200];
-		if(200==mbstowcs(Buf,lua_tostring(L,1),200))
+		wchar_t Buf[MAX_CONSOLE_COMMAND_LENGTH];
+		if(mbstowcs(Buf,lua_tostring(L,1), MAX_CONSOLE_COMMAND_LENGTH) == MAX_CONSOLE_COMMAND_LENGTH)
 			return 0;
 		justDoNoxCmd=true;
 		lua_pushinteger(L,consoleParse(Buf,1));
@@ -625,14 +621,6 @@ void consoleInit()
 	InjectAddr(0x00450E4C+1,&consoleEditProcNew);
 	InjectJumpTo(0x004884C5 ,&consoleEditDraw); // ћен€ем размеры
 	InjectJumpTo(0x450B90 ,&onPrintConsoleTrap);
-
-	//TODO: X.D> The next 6 lines must be removed in the end.
-	lua_newtable(L); // делаем таблицу дл€ строк
-	lua_pushinteger(L,1);
-	lua_setfield(L,-2,"lastItem");
-	lua_pushinteger(L,1);
-	lua_setfield(L,-2,"lastStr");
-	lua_setglobal(L,"conStr");
 
 	registerserver("conExec",&conExecL);
 	announceCapability("console_mods");

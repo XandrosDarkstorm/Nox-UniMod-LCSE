@@ -3,6 +3,10 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include "modConfiguration.h"
+#ifdef CONSOLE_COMMAND_HISTORY
+#include "commandHistory.h"
+#endif
 /*
 Исследовать:
 +) Появление обелисков
@@ -1224,6 +1228,12 @@ int initWindowedMode(int param1, int param2, int param3)
 /// </summary>
 void initStepTwo()
 {
+//Support for mod config file. Needs to be the earliest thing to load.
+#ifdef WITH_MOD_CONFIG
+	initModConfig();
+#endif // WITH_MOD_CONFIG
+
+
 	exInit();
 	initModLib2();
 	luaopen_lpeg (L);
@@ -1346,6 +1356,9 @@ void initStepTwo()
 	//Modules
 	mapUtilInit(L);
 	initFilesystem();
+#ifdef CONSOLE_COMMAND_HISTORY
+	CommandHistory::initCommandHistoryModule();
+#endif
 	consoleInit();
 	adminInit(L);
 	authInit(L);   //Authentication service module
@@ -1457,5 +1470,6 @@ void initStepTwo()
 	registerclient("getGameDirectory", &getGameDirectoryL);
 	registerclient("getNormalizedPath", &getNormalizedPathL);
 	registerclient("getDirectoryListing", &getDirectoryListingL);
+	
 	initManifest();
 };

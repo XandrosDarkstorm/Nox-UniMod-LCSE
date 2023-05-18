@@ -49,7 +49,7 @@
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(SolutionDir)Libs\LuaJIT-2.0.3\src;$(UniversalCRT_IncludePath);$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Modules;$(SolutionDir)Libs\LuaJIT-2.0.3\src;$(UniversalCRT_IncludePath);$(IncludePath)</IncludePath>
     <EmbedManifest>false</EmbedManifest>
     <LibraryPath>$(UniversalCRT_LibraryPath_x86);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
@@ -61,7 +61,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>Libs\lpng151;Libs\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Libs\lpng151;Libs\zlib;Modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;UNIMOD_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -124,6 +124,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="commandHistory.cpp" />
     <ClCompile Include="imageUtil.cpp" />
     <ClCompile Include="Libs\json.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -140,6 +141,7 @@
     <ClCompile Include="libVer.cpp" />
     <ClCompile Include="lua_addons.cpp" />
     <ClCompile Include="mapUtil.cpp" />
+    <ClCompile Include="modConfiguration.cpp" />
     <ClCompile Include="noxManifest.cpp" />
     <ClCompile Include="playerExternFunction.cpp" />
     <ClCompile Include="polygon.cpp" />
@@ -205,10 +207,6 @@
     <ClCompile Include="fxBuff.cpp" />
     <ClCompile Include="gui.cpp" />
     <ClCompile Include="keys.cpp" />
-    <ClCompile Include="replays.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Use</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="spellGet.cpp" />
     <ClCompile Include="spelList.cpp" />
     <ClCompile Include="sprite.cpp" />
@@ -223,9 +221,11 @@
   <ItemGroup>
     <ClInclude Include="apitools_windows.h" />
     <ClInclude Include="buildParameters.h" />
+    <ClInclude Include="commandHistory.h" />
     <ClInclude Include="input_info.h" />
     <ClInclude Include="Libs\lpeg.h" />
     <ClInclude Include="Libs\csha1\SHA1.h" />
+    <ClInclude Include="modConfiguration.h" />
     <ClInclude Include="player.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="bzip2\bzlib.h" />
