@@ -441,6 +441,8 @@ namespace
 
 				case noxKeyboardKeys::KBD_UP:
 #ifdef CONSOLE_COMMAND_HISTORY
+					if (!CommandHistory::isEnabled())
+						break;
 					if (conCurrentHistoryRecord == CommandHistory::getFirstRecord())
 					{
 						/*
@@ -466,7 +468,7 @@ namespace
 				case noxKeyboardKeys::KBD_DOWN:
 #ifdef CONSOLE_COMMAND_HISTORY
 					//We can only advance if there is a next record
-					if (conCurrentHistoryRecord != CommandHistory::getEndOfList())
+					if (CommandHistory::isEnabled() && conCurrentHistoryRecord != CommandHistory::getEndOfList())
 					{
 						//Restore user's input, if user reached the EOL mark.
 						if (++conCurrentHistoryRecord == CommandHistory::getEndOfList())
@@ -489,7 +491,7 @@ namespace
 
 #ifdef CONSOLE_COMMAND_HISTORY
 					//Record command to the history buffer
-					if (console_cmd.length() > 0 && !conSysopPasswordModeActive)
+					if (CommandHistory::isEnabled() && console_cmd.length() > 0 && !conSysopPasswordModeActive)
 					{
 						CommandHistory::appendToHistoryBuffer(console_cmd);
 					}

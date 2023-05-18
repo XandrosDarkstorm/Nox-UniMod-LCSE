@@ -28,6 +28,11 @@ void CommandHistory::clearHistory()
 	commandHistoryBuffer.clear();
 }
 
+bool CommandHistory::isEnabled()
+{
+	return commandHistorySize > 0;
+}
+
 void CommandHistory::initCommandHistoryModule()
 {
 	//TODO: X.D> There should be the config information.
