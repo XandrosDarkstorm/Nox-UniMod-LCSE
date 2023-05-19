@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "noxManifest.h"
 #ifdef RCON_HTTP_SERVER
 
 #include "unit.h"

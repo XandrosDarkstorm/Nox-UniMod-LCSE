@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#include <string>
 #include "input_info.h"
 #include "apitools_windows.h"
 #include "commandHistory.h"
+#include "noxManifest.h"
+#include <string>
 
 
 struct packetChat

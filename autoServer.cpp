@@ -1,5 +1,5 @@
 #include "stdafx.h"
-
+#include "noxManifest.h"
 void (__cdecl *sub_43B4D0) (); //для хоста 
 void (__cdecl *parseGamedataBinPre) ();
 int (__cdecl *noxCheckGameFlags) (int);

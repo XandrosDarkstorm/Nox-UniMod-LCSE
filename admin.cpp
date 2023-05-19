@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "player.h"
 #include "unit.h"
+#include "noxManifest.h"
 #include <iostream>
 #include <fstream>
 #include <vector>

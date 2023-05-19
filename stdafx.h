@@ -31,8 +31,6 @@ extern lua_State *L;
 typedef std::string TString;
 typedef unsigned char byte;
 
-extern void announceCapability(const char* capability_name);
-
 /// <summary>
 /// Strips spaces both from left and right side in a given string.
 /// </summary>

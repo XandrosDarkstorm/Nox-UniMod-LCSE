@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "unit.h"
+#include "noxManifest.h"
 
 extern void (__cdecl *netClientSend) (int PlrN,int Dir,//1 - клиенту
 								void *Buf,int BufSize);
