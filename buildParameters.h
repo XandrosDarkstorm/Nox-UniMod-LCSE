@@ -1,6 +1,6 @@
 #pragma once
 #define MODNAME "Nox Unimod"
-#define MODVERSION "1.0 LCSE"
+#define MODVERSION "0.1 LCSE"
 
 //List of enabled features below
 #define FIX_FON_BLOCK_GREATSWORD
