@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "commandHistory.h"
 #include "modConfiguration.h"
+#include "apitools_windows.h"
 
 void CommandHistory::appendToHistoryBuffer(std::wstring command)
 {
@@ -36,8 +37,18 @@ bool CommandHistory::isEnabled()
 void CommandHistory::initCommandHistoryModule()
 {
 	//TODO: X.D> There should be the config information.
-	if (noConfigMode)
-		commandHistorySize = CommandHistory::MAXENTRIES;
+	if (ModConfig::noConfigMode)
+		commandHistorySize = DEFAULT_MAXENTRIES;
 	else
-		commandHistorySize = 10;
+	{
+		if (!ModConfig::getUInt32Value("console.command_history_size", commandHistorySize))
+		{
+			commandHistorySize = MAXENTRIES;
+		}
+		if (commandHistorySize > MAXENTRIES)
+		{
+			osWarningMessageBox("Configuration error", "Command history size is too big (" + std::to_string(commandHistorySize) + " > " + std::to_string(MAXENTRIES) + ").\n\nThe mod will limit the command history to " + std::to_string(MAXENTRIES));
+			commandHistorySize = MAXENTRIES;
+		}
+	}
 }

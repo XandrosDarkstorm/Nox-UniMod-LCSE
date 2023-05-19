@@ -238,6 +238,9 @@
     <ClInclude Include="modConfiguration.h">
       <Filter>Source Files\client\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="noxManifest.h">
+      <Filter>Source Files\client</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Library Include="Libs\libpng.lib">

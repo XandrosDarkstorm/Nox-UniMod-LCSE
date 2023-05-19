@@ -1,14 +1,6 @@
 #include "stdafx.h"
-#include <vector>
+#include "noxManifest.h"
 
-// This list tracks our Unimod modules. Use announceCapability() function to add to this list
-std::vector<std::string> modCapabilities;
-// This list tracks user loaded modules.
-std::vector<std::string> userLuaCapabilities;
-/// <summary>
-/// This function returns a table, which acts as a client manifest.
-/// This table can be used by scripts to differentiate various Nox mods and its versions.
-/// </summary>
 int noxClientInfoL(lua_State* L)
 {
 	lua_createtable(L, 3, 0);
@@ -27,10 +19,6 @@ int noxClientInfoL(lua_State* L)
 	return 1;
 }
 
-/// <summary>
-/// Appends capability / module to the client manifest.
-/// </summary>
-/// <param name="capability_name">Capability name. Please, prefer concise and meaningfull names.</param>
 void announceCapability(const char* capability_name)
 {
 	modCapabilities.push_back(capability_name);
@@ -60,9 +48,6 @@ int declareLuaCapabilityL(lua_State* L)
 	return 1;
 }
 
-/// <summary>
-/// Return a table with capabilities announced by the Lua environment.
-/// </summary>
 int listLuaCapabilitiesL(lua_State* L)
 {
 	lua_createtable(L, 0, userLuaCapabilities.size());

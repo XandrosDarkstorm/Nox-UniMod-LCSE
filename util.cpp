@@ -1230,7 +1230,7 @@ void initStepTwo()
 {
 //Support for mod config file. Needs to be the earliest thing to load.
 #ifdef WITH_MOD_CONFIG
-	initModConfig();
+	ModConfig::initModConfig();
 #endif // WITH_MOD_CONFIG
 
 

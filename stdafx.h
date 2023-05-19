@@ -14,6 +14,7 @@
 #include <tchar.h>
 #include <stdlib.h>
 #include <string>
+#include <cwctype>
 #include "buildParameters.h"
 
 typedef unsigned char byte;
@@ -31,6 +32,40 @@ typedef std::string TString;
 typedef unsigned char byte;
 
 extern void announceCapability(const char* capability_name);
+
+/// <summary>
+/// Strips spaces both from left and right side in a given string.
+/// </summary>
+/// <param name="SourceStr">A string to perform operation on</param>
+void stripWhitespaces(std::string& SourceStr)
+{
+	SourceStr.erase(0, SourceStr.find_first_not_of(" "));
+	SourceStr.erase(SourceStr.find_last_not_of(" ") + 1);
+}
+
+/// <summary>
+/// Strips spaces both from left and right side in a given wstring.
+/// </summary>
+/// <param name="SourceStr">A wstring to perform operation on</param>
+void stripWhitespacesW(std::wstring& SourceStr)
+{
+	SourceStr.erase(0, SourceStr.find_first_not_of(L" "));
+	SourceStr.erase(SourceStr.find_last_not_of(L" ") + 1);
+}
+
+/// <summary>
+/// Return the source string converted to lowercase.
+/// </summary>
+/// <param name="SourceStr">Source string</param>
+std::wstring toLowercase(std::wstring& SourceStr)
+{
+	std::wstring result;
+	for (int i = 0; i < SourceStr.length(); ++i)
+	{
+		result.push_back(std::towlower(SourceStr[i]));
+	}
+	return result;
+}
 
 enum uniPacket_e
 {
@@ -360,6 +395,3 @@ extern const int *noxScreenY;
 #include <map>
 typedef std::map <BYTE,netClientFn_s> ClientMap_s;
 typedef std::map <BYTE,netServFn_s> ServerMap_s;
-
-
-#define goto wtf юзать гоуту нельзя

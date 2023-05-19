@@ -3,7 +3,7 @@
 #include "input_info.h"
 #include "apitools_windows.h"
 #include "commandHistory.h"
-#include <cwctype>
+
 
 struct packetChat
 {
@@ -153,30 +153,6 @@ namespace
 			}
 			return pos;
 		}
-	}
-
-	/// <summary>
-	/// Strips spaces both from left and right side in a given wstring.
-	/// </summary>
-	/// <param name="SourceStr">A string to perform operation on</param>
-	void stripWhitespaces(std::wstring& SourceStr)
-	{
-		SourceStr.erase(0, SourceStr.find_first_not_of(L" "));
-		SourceStr.erase(SourceStr.find_last_not_of(L" ") + 1);
-	}
-
-	/// <summary>
-	/// Return the source string converted to lowercase.
-	/// </summary>
-	/// <param name="SourceStr">Source string</param>
-	std::wstring toLowercase(std::wstring& SourceStr)
-	{
-		std::wstring result;
-		for (int i = 0; i < SourceStr.length(); ++i)
-		{
-			result.push_back(std::towlower(SourceStr[i]));
-		}
-		return result;
 	}
 
 	/// <summary>
@@ -486,7 +462,7 @@ namespace
 				case noxKeyboardKeys::KBD_ENTER:
 				case noxKeyboardKeys::KBD_KP_ENTER:
 					//Strip spaces from the sent command. Nox does that in its code, so there is no reason not to conform.
-					stripWhitespaces(console_cmd);
+					stripWhitespacesW(console_cmd);
 					noxCallWndProc(Window, 0x401E, (int)console_cmd.c_str(), -1);
 
 #ifdef CONSOLE_COMMAND_HISTORY
