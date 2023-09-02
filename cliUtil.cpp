@@ -389,19 +389,19 @@ void cliUntilInit()
 
 	
 
-	lua_pushlightuserdata(L,&cliSetTimeoutL);/// функции
+	/*lua_pushlightuserdata(L,&cliSetTimeoutL);/// функции
 	lua_newtable(L);
 	lua_settable(L,LUA_REGISTRYINDEX);
 	lua_pushlightuserdata(L,&cliTimeoutNextId);/// значения
 	lua_newtable(L);
 	lua_settable(L,LUA_REGISTRYINDEX);
-	
+	*/
 
-	lua_pushcfunction(L,&cliSetTimeoutL); 
+	//lua_pushcfunction(L,&cliSetTimeoutL); 
 	// очень важная функция, ее надо в реестр луа класть 
 	// чтобы нельзя было удалить случайно
 	lua_pushvalue(L,-1); 
-	lua_setfield(L,LUA_REGISTRYINDEX,"cliSetTimeout");
+	//lua_setfield(L,LUA_REGISTRYINDEX,"cliSetTimeout");
 	registerClientVar("cliSetTimeout");
 	registerclient("spriteGet",&spriteGetL);
 	registerclient("cliBubble",&cliShowBubble);
@@ -411,15 +411,16 @@ void cliUntilInit()
 	registerclient("directGet",&directL);
 	netRegClientPacket(upSendBubble,&netOnBubble);
 
-	InjectJumpTo(0x0043E778,&asmToCliTimer);
+	//InjectJumpTo(0x0043E778,&asmToCliTimer);
 	InjectOffs(0x004460C5+1,&onClientQuitServer);
-	InjectOffs(0x0043E163+1,&onMapLoadCli);
-	InjectOffs(0x0043DF66+1,&onMapLoadCli);
+	//InjectOffs(0x0043E163+1,&onMapLoadCli);
+	//InjectOffs(0x0043DF66+1,&onMapLoadCli);
 
 }
 
 void autoexecCli()
 {
+	return;
 	if(newMapCli)
 	{
 		newMapCli = false;
